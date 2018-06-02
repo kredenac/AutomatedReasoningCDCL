@@ -18,9 +18,9 @@
  */
 enum class Tribool: int8_t
 {
-  False,
-  True,
-  Undefined
+    False,
+    True,
+    Undefined
 };
 
 /**
@@ -47,69 +47,69 @@ std::ostream& operator<<(std::ostream &out, const PartialValuation &pval);
 class PartialValuation
 {
 public:
-  PartialValuation(unsigned nVars = 0);
-  
-  /**
-   * @brief push - na osnovu literala postavlja vrednost promenljive u parcijalnoj valuaciji.
-   * @param l - literal nas osnovu koga se postavlja vrednost
-   * @param decide - ukoliko je 'decide' flag true oznacava se da je u pitanju decide literal
-   */
-  void push(Literal l, bool decide = false);
-  
-  /**
-   * @brief backtrack - skida literale sa steka sve do prvog decide literala na koji naidje
-   * @return poslednji decide literal ili NullLiteral ukoliko takvog nema
-   */
-  Literal backtrack();
-  
-  /**
-   * @brief isClauseFalse - proverava da li je klauza netacna u tekucoj parcijalnoj valuaciji.
-   * 
-   * @details Klauza je netacna u tekucoj parcijalnoj valuaciji ako za svaki literal klauze
-   * vazi da je u parcijalnoj valuaciji njemu suprotan literal.
-   * @param c - klauza koja se proverava
-   * @return true ako je klauza netacna, false inace
-   */
-  bool isClauseFalse(const Clause &c) const;
-  
-  /**
-   * @brief isClauseUnit - proverava da li je klauza jedinicna zbog propagacije jedinicnog literala.
-   * 
-   * @details Klauza je jedinicna ako za svaki literal klauze osim jednog, parcijalna valuacija
-   * sadrzi njemu suprotan literal. Ovaj jedan je nedefinisan.
-   * @param c - klauza koja se proverava
-   * @return literal koji je jedini nedefinisan u tekucoj klauzi
-   */
-  Literal isClauseUnit(const Clause &c) const;
-  
-  /**
-   * @brief firstUndefined - trazi prvi nedefinisani literal u valuaciji
-   * 
-   * @details Sluzi za izbor literala za decide pravilo. Ovde bi mogla da se ubaci neka heuristika
-   * za biranje najpodesnijeg literala, trenutno se uzima od svih nedefinisanih onaj sa najmanjim
-   * indeksom.
-   * @return nedefinisani literal sa najmanjim indeksom
-   */
-  Literal firstUndefined() const;
+    PartialValuation(unsigned nVars = 0);
 
-  /**
-   * @brief reset - postavlja parcijalnu valuaciju u pocetnu poziciju
-   * 
-   * @details Sve promenljive se postavljaju na Tribool::Undefined, a stek se prazni.
-   * @param nVars - broj promenljivih
-   */
-  void reset(unsigned nVars);
-  
-  friend std::ostream& operator<<(std::ostream &out, const PartialValuation &pval);
+    /**
+    * @brief push - na osnovu literala postavlja vrednost promenljive u parcijalnoj valuaciji.
+    * @param l - literal nas osnovu koga se postavlja vrednost
+    * @param decide - ukoliko je 'decide' flag true oznacava se da je u pitanju decide literal
+    */
+    void push(Literal l, bool decide = false);
+
+    /**
+    * @brief backtrack - skida literale sa steka sve do prvog decide literala na koji naidje
+    * @return poslednji decide literal ili NullLiteral ukoliko takvog nema
+    */
+    Literal backtrack();
+
+    /**
+    * @brief isClauseFalse - proverava da li je klauza netacna u tekucoj parcijalnoj valuaciji.
+    *
+    * @details Klauza je netacna u tekucoj parcijalnoj valuaciji ako za svaki literal klauze
+    * vazi da je u parcijalnoj valuaciji njemu suprotan literal.
+    * @param c - klauza koja se proverava
+    * @return true ako je klauza netacna, false inace
+    */
+    bool isClauseFalse(const Clause &c) const;
+
+    /**
+    * @brief isClauseUnit - proverava da li je klauza jedinicna zbog propagacije jedinicnog literala.
+    *
+    * @details Klauza je jedinicna ako za svaki literal klauze osim jednog, parcijalna valuacija
+    * sadrzi njemu suprotan literal. Ovaj jedan je nedefinisan.
+    * @param c - klauza koja se proverava
+    * @return literal koji je jedini nedefinisan u tekucoj klauzi
+    */
+    Literal isClauseUnit(const Clause &c) const;
+
+    /**
+    * @brief firstUndefined - trazi prvi nedefinisani literal u valuaciji
+    *
+    * @details Sluzi za izbor literala za decide pravilo. Ovde bi mogla da se ubaci neka heuristika
+    * za biranje najpodesnijeg literala, trenutno se uzima od svih nedefinisanih onaj sa najmanjim
+    * indeksom.
+    * @return nedefinisani literal sa najmanjim indeksom
+    */
+    Literal firstUndefined() const;
+
+    /**
+    * @brief reset - postavlja parcijalnu valuaciju u pocetnu poziciju
+    *
+    * @details Sve promenljive se postavljaju na Tribool::Undefined, a stek se prazni.
+    * @param nVars - broj promenljivih
+    */
+    void reset(unsigned nVars);
+
+    friend std::ostream& operator<<(std::ostream &out, const PartialValuation &pval);
 private:
-  /**
-   * @brief m_values - vrednost promenljivih u valuaciji
-   */
-  std::vector<Tribool> m_values;
-  /**
-   * @brief m_stack - stek na kome cuvamo istoriju postavljanja vrednosti promenljivih zbog vracanja unazad
-   */
-  std::vector<Literal> m_stack;
+    /**
+    * @brief m_values - vrednost promenljivih u valuaciji
+    */
+    std::vector<Tribool> m_values;
+    /**
+    * @brief m_stack - stek na kome cuvamo istoriju postavljanja vrednosti promenljivih zbog vracanja unazad
+    */
+    std::vector<Literal> m_stack;
 };
 
 #endif // PARTIALVALUATION_H
