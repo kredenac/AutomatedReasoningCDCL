@@ -6,11 +6,6 @@
 #include <iostream>
 
 /**
- * S obzirom na to da cemo za literale koristiti oznacene celobrojne vrednosti 0 je specijalna vrednost.
- */
-#define NullLiteral (0)
-
-/**
  * @brief The Tribool enum - koristimo da kodiramo 3 vrednosti za promenljivu u parcijalnoj valuaciji.
  * 
  * @details Za razliku od C-a u C++-u je moguce kontrolisati tip enumeracije. Konkretno nama 
@@ -33,6 +28,11 @@ enum class Tribool: int8_t
 using Literal = int;
 using Clause = std::vector<Literal>;
 using CNFFormula = std::vector<Clause>;
+
+/**
+ * S obzirom na to da cemo za literale koristiti oznacene celobrojne vrednosti 0 je specijalna vrednost.
+ */
+const Literal NullLiteral = 0;
 
 /**
  * Deklaracija klase i operatora za ispis u stream.
@@ -102,6 +102,17 @@ public:
 
     friend std::ostream& operator<<(std::ostream &out, const PartialValuation &pval);
 private:
+    /**
+     * @brief c_stackSizeMultiplier - for each decided literal there will be
+     * ramp and the position of previous decided literal
+     * Thats 3 elements for each 1 decide
+     */
+    unsigned c_stackSizeMultiplier;
+
+    /**
+     * @brief m_lastDecidePos - position of last decided literal
+     */
+    unsigned m_lastDecidePos;
     /**
     * @brief m_values - vrednost promenljivih u valuaciji
     */

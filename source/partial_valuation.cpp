@@ -7,21 +7,28 @@ PartialValuation::PartialValuation(unsigned nVars)
     : m_values(nVars+1, Tribool::Undefined),
     m_stack()
 {
-    m_stack.reserve(nVars);
+    m_lastDecidePos = 0;
+    m_stack.reserve(nVars * c_stackSizeMultiplier);
 }
 
+// TODO enable O(1) jumping
+// ..... [position of last decide], [NullLiteral], [decided literal], .......
 void PartialValuation::push(Literal l, bool decide)
 {
     /* Promenljivu od literala dobijamo sa std::abs, a za polaritet proveravamo znak */
     m_values[std::abs(l)] = l > 0 ? Tribool::True : Tribool::False;
     if (decide)
     {
-        /* Postavljamo rampu pre literala da bismo znali da je decide literal u pitanju */
+        // store the position of last decided literal
+//        m_stack.push_back(m_lastDecidePos);
+        // putting a ramp so it can be know that the next element is decided
         m_stack.push_back(NullLiteral);
+        m_lastDecidePos = m_stack.size();
     }
     m_stack.push_back(l);
 }
 
+// TODO make O(1) jump
 Literal PartialValuation::backtrack()
 {
     /* Proveravamo da nije prazan stek */
@@ -29,6 +36,17 @@ Literal PartialValuation::backtrack()
     {
         return NullLiteral;
     }
+
+
+//    if (m_lastDecidePos == 0)
+//    {
+//        return NullLiteral;
+//    }
+//    // may not actually be smart enough to know that it doesn't need linear
+//    // time to resize, but constant time. In that case making a custom allocator is needed
+//    m_stack.resize(m_lastDecidePos);
+
+
 
     Literal lastDecide = NullLiteral, last = NullLiteral;
     do {
@@ -108,7 +126,7 @@ void PartialValuation::reset(unsigned nVars)
     std::fill(m_values.begin(), m_values.end(), Tribool::Undefined);
 
     m_stack.clear();
-    m_stack.reserve(nVars);
+    m_stack.reserve(nVars * c_stackSizeMultiplier);
 }
 
 

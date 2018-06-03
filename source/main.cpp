@@ -2,10 +2,14 @@
 
 #include <fstream>
 #include <stdexcept>
-
 #include <string>
 #include <limits.h>
 #include <unistd.h>
+#include <chrono>
+#include <ctime>
+
+using std::chrono::high_resolution_clock;
+using time_point = std::chrono::high_resolution_clock::time_point;
 
 int main(int argc, char **argv)
 {
@@ -28,8 +32,18 @@ int main(int argc, char **argv)
     {
         throw std::runtime_error{"Bad path to dimacs file"};
     }
+    // std::cout << "sizeof long double = " << sizeof(long double) << std::endl; // some compilers print 16
+
+
+    time_point startTime = high_resolution_clock::now();
+    std::clock_t c_start = std::clock();
+
     Solver s{dimacsStream};
     OptionalPartialValuation solution = s.solve();
+
+    std::clock_t c_end = std::clock();
+    time_point finishTime = high_resolution_clock::now();
+
     if (solution)
     {
         std::cout << solution.value() << std::endl;
@@ -38,6 +52,11 @@ int main(int argc, char **argv)
     {
         std::cout << "UNSAT" << std::endl;
     }
+
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(finishTime - startTime).count();
+    long double time_elapsed_ms = 1000.0 * (c_end-c_start) / CLOCKS_PER_SEC;
+    std::cout << "CPU time used: " << time_elapsed_ms  << " ms" << std::endl;
+    std::cout << "Total time elapsed = " << duration << " ms" << std::endl;
     return 0;
 }
 
