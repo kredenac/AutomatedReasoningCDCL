@@ -30,6 +30,8 @@ public:
     OptionalPartialValuation solve();
   
 private:
+
+    const std::string DimacsWrongFormat = "Wrong input format of DIMACS stream";
     /**
     * @brief hasConflict - provera da li je neka klauza u konfliktu sa tekucom valuacijom
     * @return true ako je neka klauza u konfliktu, false inace

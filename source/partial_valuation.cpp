@@ -7,7 +7,7 @@ PartialValuation::PartialValuation(unsigned nVars)
     : m_values(nVars+1, Tribool::Undefined),
     m_stack()
 {
-    m_stack.reserve(nVars); /* rezervisemo memoriju da izbegnemo ceste realokacije */
+    m_stack.reserve(nVars);
 }
 
 void PartialValuation::push(Literal l, bool decide)
@@ -131,7 +131,7 @@ std::ostream &operator<<(std::ostream &out, const PartialValuation &pval)
         }
         else
         {
-            throw std::logic_error{"Nepoznata vrednost dodeljena promenljivoj (nije ni True, ni False, ni Undefined)"};
+            throw std::logic_error{"Unknown value assigned to variable (not True, nor Flase, nor Undefined)"};
         }
     }
     return out << " ]";

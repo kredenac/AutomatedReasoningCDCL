@@ -27,18 +27,18 @@ Solver::Solver(std::istream &dimacsStream)
     /* Proveravamo da smo procitali liniju 'p cnf brPromenljivih brKlauza' */
     if (line[firstNonSpaceIdx] != 'p')
     {
-        throw std::runtime_error{"Pogresan format ulaza iz DIMACS stream-a"};
+        throw std::runtime_error{DimacsWrongFormat};
     }
     std::istringstream parser{line.substr(firstNonSpaceIdx+1, std::string::npos)};
     std::string tmp;
     if (!(parser >> tmp) || tmp != "cnf")
     {
-        throw std::runtime_error{"Pogresan format ulaza iz DIMACS stream-a"};
+        throw std::runtime_error{DimacsWrongFormat};
     }
     unsigned varCnt, claCnt;
     if (!(parser >> varCnt >> claCnt))
     {
-        throw std::runtime_error{"Pogresan format ulaza iz DIMACS stream-a"};
+        throw std::runtime_error{DimacsWrongFormat};
     }
 
     /* Citamo klauze linije po liniju preskacuci komentare i prazne linije */
