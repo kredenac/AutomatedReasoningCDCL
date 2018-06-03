@@ -28,7 +28,9 @@ public:
     * @return parcijalnu valuaciju ili nista
     */
     OptionalPartialValuation solve();
-  
+
+
+    bool UseLearning;
 private:
 
     const std::string DimacsWrongFormat = "Wrong input format of DIMACS stream";
@@ -48,8 +50,9 @@ private:
     /**
      * @brief LearnClause - lears a new clause by inferring from a conflicing clause
      * @param conflict - first clause that wasn't satisfiable with a current valuation
+     * @return whether or not a new clause was learnt
      */
-    void learnClause(Clause* conflict);
+    bool learnClause(Clause* conflict);
 
     /**
      * @brief newClauseFromConflicting - constructs a learned clause from a conflicting one

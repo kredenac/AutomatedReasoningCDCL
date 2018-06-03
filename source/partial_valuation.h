@@ -1,23 +1,12 @@
 #ifndef PARTIALVALUATION_H
 #define PARTIALVALUATION_H
 
+#include "choise.h"
+
 #include <vector>
-#include <cstdint>
 #include <iostream>
 #include <algorithm>
 
-/**
- * @brief The Tribool enum - koristimo da kodiramo 3 vrednosti za promenljivu u parcijalnoj valuaciji.
- * 
- * @details Za razliku od C-a u C++-u je moguce kontrolisati tip enumeracije. Konkretno nama 
- * trebaju 3 vrednosti zbog cega nam je 1 bajt i vise nego dovoljan. 
- */
-enum class Tribool: int8_t
-{
-    False,
-    True,
-    Undefined
-};
 
 /**
  * Za literal cemo koristiti int vrednosti, pri cemu je najmanji indeks literala 1 tj. p1.
@@ -51,11 +40,28 @@ public:
     PartialValuation(unsigned nVars = 0);
 
     /**
-    * @brief push - na osnovu literala postavlja vrednost promenljive u parcijalnoj valuaciji.
-    * @param l - literal nas osnovu koga se postavlja vrednost
-    * @param decide - ukoliko je 'decide' flag true oznacava se da je u pitanju decide literal
+     * @brief updateWeights - increases the weights of literals in a given clause
+     * @param c - learnt clause
+     */
+    void updateWeights(Clause& c);
+
+    /**
+     * @brief updateWeights - lowers the value of all weights
+     */
+    void updateWeights();
+
+    /**
+     * @brief decideHeuristic - heuristic based on VSIDS
+     * @return decided literal
+     */
+    Literal decideHeuristic();
+    /**
+    * @brief push - set value of variable in valuation based on literal
+    * @param l - literal
+    * @param reason - pointer to clause which is a reason for unit prop.
+    * default nullptr when it's a decided literal
     */
-    void push(Literal l, bool decide = false);
+    void push(Literal l, Clause* reason = nullptr);
 
     /**
     * @brief backtrack - skida literale sa steka sve do prvog decide literala na koji naidje
@@ -66,9 +72,9 @@ public:
     /**
      * @brief backtrack to when the first-assigned variable involved in the conflict was assigned
      * @param cut - clause of variables involved in the conflict
-     * @return first decided literal that is also in the given clause
+     * @return if backtracking succeeded or not
      */
-    Literal backtrack(Clause& cut);
+    bool backtrack(Clause& cut);
 
     /**
     * @brief isClauseFalse - proverava da li je klauza netacna u tekucoj parcijalnoj valuaciji.
@@ -110,6 +116,12 @@ public:
 
     friend std::ostream& operator<<(std::ostream &out, const PartialValuation &pval);
 private:
+
+    /**
+     * @brief divideWeightsBy how much to divide weigts when calling their update
+     */
+    const float divideWeightsBy = 2.0f;
+
     /**
      * @brief c_stackSizeMultiplier - for each decided literal there will be
      * a ramp, so possibly 2x number of literals in stack
@@ -117,14 +129,14 @@ private:
     const unsigned c_stackSizeMultiplier = 2;
 
     /**
-    * @brief m_values - vrednost promenljivih u valuaciji
+    * @brief m_values - vector of variable values and their levels
     */
-    std::vector<Tribool> m_values;
+    std::vector<LiteralInfo> m_values;
 
     /**
     * @brief m_stack - stek na kome cuvamo istoriju postavljanja vrednosti promenljivih zbog vracanja unazad
     */
-    std::vector<Literal> m_stack;
+    std::vector<Choise> m_stack;
 };
 
 #endif // PARTIALVALUATION_H

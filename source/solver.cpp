@@ -28,7 +28,7 @@ Clause Solver::negateClauseLiterals(Clause& cut) const
     return c;
 }
 
-void Solver::learnClause(Clause* conflict)
+bool Solver::learnClause(Clause* conflict)
 {
     if (conflict == nullptr)
     {
@@ -42,7 +42,9 @@ void Solver::learnClause(Clause* conflict)
     m_learned.push_back(newClause);
 
     // 3. Non-chronologically backtrack ("back jump") to the appropriate decision level, where the first-assigned variable involved in the conflict was assigned
-    m_valuation.backtrack();
+    // u nekim slajdovima pise da je Assertion level drugi najveci...
+    auto lit = m_valuation.backtrack(newClause);
+    return lit != NullLiteral;
 }
 
 Solver::Solver(std::istream &dimacsStream)
@@ -97,20 +99,28 @@ OptionalPartialValuation Solver::solve()
 {
     while (true)
     {
-        /* Proverimo da li ima bar 1 konflikt */
         Literal l;
         Clause * conflict;
         if ((conflict = hasConflict()))
         {
-            /* Radimo backtracking i dobijamo literal koji smo nekad ranije postavili decide pravilom */
+            if (false)
+            {
+                bool hasLearned = learnClause(conflict);
+
+                if (hasLearned)
+                {
+                    continue;
+                }
+            }
+
             Literal decidedLiteral = m_valuation.backtrack();
             if (NullLiteral == decidedLiteral)
             {
-                /* Ne mozemo vise da radimo backtrack, iscrpeli smo sve valuacije */
+                // no more backtracking, we've tried out all valuations
                 return {};
             }
 
-            /* Postavljamo suprotnu vrednost literala i nastavljamo */
+            // try with opposide literal value
             m_valuation.push(-decidedLiteral);
         }
         else if ((l = hasUnitClause()))
@@ -121,9 +131,10 @@ OptionalPartialValuation Solver::solve()
         else
         {
             /* Decide pravilo */
-            if ((l = m_valuation.firstUndefined()))
+            l = m_valuation.firstUndefined();
+            if (l)
             {
-                m_valuation.push(l, true);
+                m_valuation.push(l);
             }
             else
             {

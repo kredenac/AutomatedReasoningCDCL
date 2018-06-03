@@ -11,6 +11,10 @@
 using std::chrono::high_resolution_clock;
 using time_point = std::chrono::high_resolution_clock::time_point;
 
+// odavde sam gledao slajdove, al ne govore sve isto
+// http://ssa-school-2016.it.uu.se/wp-content/uploads/2016/06/LaurentSimon.pdf
+// https://www.slideshare.net/sakai/how-a-cdcl-sat-solver-works
+
 int main(int argc, char **argv)
 {
     std::ifstream dimacsStream;
@@ -21,7 +25,7 @@ int main(int argc, char **argv)
         //std::cout << "type in cnf file name" << std::endl;
         //std::string fname;
         //std::cin >> fname;
-        dimacsStream = std::ifstream{"../source/test-SAT.cnf"};
+        dimacsStream = std::ifstream{"../source/sudoku.cnf"};
     }
     else
     {
@@ -39,6 +43,7 @@ int main(int argc, char **argv)
     std::clock_t c_start = std::clock();
 
     Solver s{dimacsStream};
+    s.UseLearning = false;
     OptionalPartialValuation solution = s.solve();
 
     std::clock_t c_end = std::clock();

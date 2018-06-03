@@ -4,73 +4,121 @@
 #include <cstdlib>
 
 PartialValuation::PartialValuation(unsigned nVars)
-    : m_values(nVars+1, Tribool::Undefined),
+    : m_values(nVars+1, c_defaultLiteralInfo),
     m_stack()
 {
     m_stack.reserve(nVars * c_stackSizeMultiplier);
+
 }
 
-void PartialValuation::push(Literal l, bool decide)
+void PartialValuation::updateWeights(Clause& c)
+{
+    for (Literal l : c)
+    {
+        m_values[abs(l)].weight += 1;
+    }
+}
+
+void PartialValuation::updateWeights()
+{
+    std::for_each(m_values.begin(), m_values.end(),
+        [divideWeightsBy = divideWeightsBy] (LiteralInfo& f)
+        {
+            f.weight = f.weight / divideWeightsBy;
+        }
+    );
+}
+
+Literal PartialValuation::decideHeuristic()
+{
+    // Variable State Independent Decaying Sum
+    unsigned n = m_values.size();
+    unsigned candidatePos = NullLiteral;
+    for (unsigned i = 1; i < n; i++)
+    {
+        if (m_values[i].value == Tribool::Undefined &&
+                m_values[i].weight >= m_values[candidatePos].weight)
+        {
+            candidatePos = i;
+        }
+    }
+    return candidatePos;
+}
+
+void PartialValuation::push(Literal l, Clause* reason)
 {
     /* Promenljivu od literala dobijamo sa std::abs, a za polaritet proveravamo znak */
-    m_values[std::abs(l)] = l > 0 ? Tribool::True : Tribool::False;
-    if (decide)
+    unsigned pos = std::abs(l);
+    m_values[pos].value = l > 0 ? Tribool::True : Tribool::False;
+    unsigned level = m_stack.back().level;
+
+    // if decide literal
+    if (!reason)
     {
-        m_stack.push_back(NullLiteral);
+        level++;
     }
-    m_stack.push_back(l);
+    m_values[pos].level = level;
+    m_stack.emplace_back(l, level, reason);
 }
 
 Literal PartialValuation::backtrack()
 {
-    /* Proveravamo da nije prazan stek */
     if (m_stack.empty())
     {
         return NullLiteral;
     }
 
-    Literal lastDecide = NullLiteral, last = NullLiteral;
+
     do {
-        /* Dohvatamo poslednje postavljeni literal i skidamo ga sa steka */
-        last = m_stack.back();
+        Choise last = m_stack.back();
         m_stack.pop_back();
-        m_values[std::abs(last)] = Tribool::Undefined;
+        unsigned pos = abs(last.lit);
+        m_values[pos].value = Tribool::Undefined;
+        m_values[pos].level = 0;
 
         /* Ako je on NullLiteral, tj. rampa vracamo lastDecide literal */
-        if (NullLiteral == last)
+        if (last.isDecided())
         {
+            m_stack.push_back(last);
+            // m_stack.back().reason = ????
             break;
         }
-        lastDecide = last;
     } while (m_stack.size());
 
     return last == NullLiteral ? lastDecide : NullLiteral;
 }
 
-Literal PartialValuation::backtrack(Clause& cut)
+bool PartialValuation::backtrack(Clause& reason)
 {
-    /* Proveravamo da nije prazan stek */
     if (m_stack.empty())
     {
-        return NullLiteral;
+        return false;
     }
 
-    Literal lastDecide = NullLiteral, last = NullLiteral;
-    do {
-        /* Dohvatamo poslednje postavljeni literal i skidamo ga sa steka */
-        last = m_stack.back();
+    // find 2nd most deepest level of variables in reason clause
+    std::vector<unsigned> levels(reason.size());
+    for (unsigned i = 0; i < reason.size(); i++)
+    {
+        levels[i] = m_values[abs(reason[i])].level;
+    }
+
+    if (reason.size() < 2)
+    {
+        throw "reason clause is smaller than 2!";
+    }
+
+    std::nth_element(levels.begin(), levels.end() - 2, levels.end());
+    unsigned secondMostLvl = reason[reason.size() - 2];
+
+    while(m_stack.back().level > secondMostLvl)
+    {
+        auto l = m_stack.back().lit;
+        unsigned pos = abs(l);
+        m_values[pos].value = Tribool::Undefined;
+        m_values[pos].level = 0;
         m_stack.pop_back();
-        m_values[std::abs(last)] = Tribool::Undefined;
-
-        // if it's a decide literal and also is one of the variables in given clause
-        if (NullLiteral == last && std::find(cut.cbegin(), cut.cend(), lastDecide) != cut.cend())
-        {
-            break;
-        }
-        lastDecide = last;
-    } while (m_stack.size());
-
-    return last == NullLiteral ? lastDecide : NullLiteral;
+    }
+    return true;
 }
 
 bool PartialValuation::isClauseFalse(const Clause &c) const
@@ -79,7 +127,7 @@ bool PartialValuation::isClauseFalse(const Clause &c) const
     for (Literal l : c)
     {
         Tribool variableInClause = l > 0 ? Tribool::True : Tribool::False;
-        Tribool variableInValuation = m_values[std::abs(l)];
+        Tribool variableInValuation = m_values[std::abs(l)].value;
         if (variableInClause == variableInValuation || variableInValuation == Tribool::Undefined)
         {
             return false;
@@ -98,7 +146,7 @@ Literal PartialValuation::isClauseUnit(const Clause &c) const
     for (Literal l : c)
     {
         Tribool valueInClause = l > 0 ? Tribool::True : Tribool::False;
-        Tribool valueInValuation = m_values[std::abs(l)];
+        Tribool valueInValuation = m_values[std::abs(l)].value;
         if (valueInClause != valueInValuation)
         {
             if (valueInValuation == Tribool::Undefined)
@@ -123,14 +171,15 @@ Literal PartialValuation::isClauseUnit(const Clause &c) const
 
 Literal PartialValuation::firstUndefined() const
 {
-    auto it = std::find(m_values.cbegin()+1, m_values.cend(), Tribool::Undefined);
+    // todo why does this compile?
+    auto it = std::find(m_values.cbegin()+1, m_values.cend(), c_defaultLiteralInfo);
     return it != m_values.cend() ? it-m_values.cbegin() : NullLiteral;
 }
 
 void PartialValuation::reset(unsigned nVars)
 {
     m_values.resize(nVars+1);
-    std::fill(m_values.begin(), m_values.end(), Tribool::Undefined);
+    std::fill(m_values.begin(), m_values.end(), c_defaultLiteralInfo);
 
     m_stack.clear();
     m_stack.reserve(nVars * c_stackSizeMultiplier);
@@ -142,15 +191,15 @@ std::ostream &operator<<(std::ostream &out, const PartialValuation &pval)
     out << "[ ";
     for (std::size_t i = 1; i < pval.m_values.size(); ++i)
     {
-        if (pval.m_values[i] == Tribool::True)
+        if (pval.m_values[i].value == Tribool::True)
         {
             out << 'p' << i << ' ';
         }
-        else if (pval.m_values[i] == Tribool::False)
+        else if (pval.m_values[i].value == Tribool::False)
         {
             out << "~p" << i << ' ';
         }
-        else if (pval.m_values[i] == Tribool::Undefined)
+        else if (pval.m_values[i].value == Tribool::Undefined)
         {
             out << 'u' << i << ' ';
         }
