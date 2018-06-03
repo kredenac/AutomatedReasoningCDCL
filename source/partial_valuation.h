@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstdint>
 #include <iostream>
+#include <algorithm>
 
 /**
  * @brief The Tribool enum - koristimo da kodiramo 3 vrednosti za promenljivu u parcijalnoj valuaciji.
@@ -63,6 +64,13 @@ public:
     Literal backtrack();
 
     /**
+     * @brief backtrack to when the first-assigned variable involved in the conflict was assigned
+     * @param cut - clause of variables involved in the conflict
+     * @return first decided literal that is also in the given clause
+     */
+    Literal backtrack(Clause& cut);
+
+    /**
     * @brief isClauseFalse - proverava da li je klauza netacna u tekucoj parcijalnoj valuaciji.
     *
     * @details Klauza je netacna u tekucoj parcijalnoj valuaciji ako za svaki literal klauze
@@ -104,19 +112,15 @@ public:
 private:
     /**
      * @brief c_stackSizeMultiplier - for each decided literal there will be
-     * ramp and the position of previous decided literal
-     * Thats 3 elements for each 1 decide
+     * a ramp, so possibly 2x number of literals in stack
      */
-    unsigned c_stackSizeMultiplier;
+    const unsigned c_stackSizeMultiplier = 2;
 
-    /**
-     * @brief m_lastDecidePos - position of last decided literal
-     */
-    unsigned m_lastDecidePos;
     /**
     * @brief m_values - vrednost promenljivih u valuaciji
     */
     std::vector<Tribool> m_values;
+
     /**
     * @brief m_stack - stek na kome cuvamo istoriju postavljanja vrednosti promenljivih zbog vracanja unazad
     */

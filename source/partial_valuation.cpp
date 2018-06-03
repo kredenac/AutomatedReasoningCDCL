@@ -7,28 +7,20 @@ PartialValuation::PartialValuation(unsigned nVars)
     : m_values(nVars+1, Tribool::Undefined),
     m_stack()
 {
-    m_lastDecidePos = 0;
     m_stack.reserve(nVars * c_stackSizeMultiplier);
 }
 
-// TODO enable O(1) jumping
-// ..... [position of last decide], [NullLiteral], [decided literal], .......
 void PartialValuation::push(Literal l, bool decide)
 {
     /* Promenljivu od literala dobijamo sa std::abs, a za polaritet proveravamo znak */
     m_values[std::abs(l)] = l > 0 ? Tribool::True : Tribool::False;
     if (decide)
     {
-        // store the position of last decided literal
-//        m_stack.push_back(m_lastDecidePos);
-        // putting a ramp so it can be know that the next element is decided
         m_stack.push_back(NullLiteral);
-        m_lastDecidePos = m_stack.size();
     }
     m_stack.push_back(l);
 }
 
-// TODO make O(1) jump
 Literal PartialValuation::backtrack()
 {
     /* Proveravamo da nije prazan stek */
@@ -36,17 +28,6 @@ Literal PartialValuation::backtrack()
     {
         return NullLiteral;
     }
-
-
-//    if (m_lastDecidePos == 0)
-//    {
-//        return NullLiteral;
-//    }
-//    // may not actually be smart enough to know that it doesn't need linear
-//    // time to resize, but constant time. In that case making a custom allocator is needed
-//    m_stack.resize(m_lastDecidePos);
-
-
 
     Literal lastDecide = NullLiteral, last = NullLiteral;
     do {
@@ -57,6 +38,32 @@ Literal PartialValuation::backtrack()
 
         /* Ako je on NullLiteral, tj. rampa vracamo lastDecide literal */
         if (NullLiteral == last)
+        {
+            break;
+        }
+        lastDecide = last;
+    } while (m_stack.size());
+
+    return last == NullLiteral ? lastDecide : NullLiteral;
+}
+
+Literal PartialValuation::backtrack(Clause& cut)
+{
+    /* Proveravamo da nije prazan stek */
+    if (m_stack.empty())
+    {
+        return NullLiteral;
+    }
+
+    Literal lastDecide = NullLiteral, last = NullLiteral;
+    do {
+        /* Dohvatamo poslednje postavljeni literal i skidamo ga sa steka */
+        last = m_stack.back();
+        m_stack.pop_back();
+        m_values[std::abs(last)] = Tribool::Undefined;
+
+        // if it's a decide literal and also is one of the variables in given clause
+        if (NullLiteral == last && std::find(cut.cbegin(), cut.cend(), lastDecide) != cut.cend())
         {
             break;
         }

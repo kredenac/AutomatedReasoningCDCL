@@ -32,11 +32,12 @@ public:
 private:
 
     const std::string DimacsWrongFormat = "Wrong input format of DIMACS stream";
+
     /**
-    * @brief hasConflict - provera da li je neka klauza u konfliktu sa tekucom valuacijom
-    * @return true ako je neka klauza u konfliktu, false inace
-    */
-    bool hasConflict() const;
+     * @brief checks if there is a conflict with the current valuation
+     * @return conflicting clause if it exists, nullptr otherwise
+     */
+    Clause* hasConflict();
 
     /**
     * @brief hasUnitClause
@@ -44,7 +45,22 @@ private:
     */
     Literal hasUnitClause() const;
 
+    /**
+     * @brief LearnClause - lears a new clause by inferring from a conflicing clause
+     * @param conflict - first clause that wasn't satisfiable with a current valuation
+     */
+    void learnClause(Clause* conflict);
+
+    /**
+     * @brief newClauseFromConflicting - constructs a learned clause from a conflicting one
+     * @param conflict - clause that led to conflict
+     * @return returns a learned clause that should be added to the formula
+     */
+    Clause negateClauseLiterals(Clause& conflict) const;
+
+    Clause findResponsibleLiterals(Clause& conflict) const;
 private:
+    CNFFormula m_learned;
     CNFFormula m_formula;
     PartialValuation m_valuation;
 };

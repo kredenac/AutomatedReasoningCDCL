@@ -10,6 +10,41 @@ Solver::Solver(const CNFFormula &formula)
 {
 }
 
+// TODO this is just a dummy
+Clause Solver::findResponsibleLiterals(Clause& conflict) const
+{
+    return conflict;
+}
+
+
+Clause Solver::negateClauseLiterals(Clause& cut) const
+{
+    Clause c;
+    for(Literal l : cut)
+    {
+        c.push_back(-l);
+    }
+
+    return c;
+}
+
+void Solver::learnClause(Clause* conflict)
+{
+    if (conflict == nullptr)
+    {
+        throw std::runtime_error("Delete this: bug - conflict clause is null");
+    }
+    // 1. Find the cut in the implication graph that led to the conflict
+    auto cutClause = findResponsibleLiterals(*conflict);
+
+    // 2. Derive a new clause which is the negation of the assignments that led to the conflict
+    auto newClause = negateClauseLiterals(cutClause);
+    m_learned.push_back(newClause);
+
+    // 3. Non-chronologically backtrack ("back jump") to the appropriate decision level, where the first-assigned variable involved in the conflict was assigned
+    m_valuation.backtrack();
+}
+
 Solver::Solver(std::istream &dimacsStream)
 {
     /* Citamo uvodne komentare, preskacemo prazne linije */
@@ -64,7 +99,8 @@ OptionalPartialValuation Solver::solve()
     {
         /* Proverimo da li ima bar 1 konflikt */
         Literal l;
-        if (hasConflict())
+        Clause * conflict;
+        if ((conflict = hasConflict()))
         {
             /* Radimo backtracking i dobijamo literal koji smo nekad ranije postavili decide pravilom */
             Literal decidedLiteral = m_valuation.backtrack();
@@ -98,21 +134,37 @@ OptionalPartialValuation Solver::solve()
     }
 }
 
-bool Solver::hasConflict() const
+Clause* Solver::hasConflict()
 {
-    for (const Clause &c : m_formula)
+    // first checking learned clauses
+    for (Clause& c : m_learned)
     {
         if (m_valuation.isClauseFalse(c))
         {
-            return true;
+            return &c;
         }
     }
-    return false;
+    for (Clause& c : m_formula)
+    {
+        if (m_valuation.isClauseFalse(c))
+        {
+            return &c;
+        }
+    }
+    return nullptr;
 }
 
 Literal Solver::hasUnitClause() const
 {
     Literal l;
+    // first checking learned clauses
+    for (const Clause &c : m_learned)
+    {
+        if ((l = m_valuation.isClauseUnit(c)))
+        {
+            return l;
+        }
+    }
     for (const Clause &c : m_formula)
     {
         if ((l = m_valuation.isClauseUnit(c)))
@@ -120,5 +172,5 @@ Literal Solver::hasUnitClause() const
             return l;
         }
     }
-    return 0;
+    return NullLiteral;
 }
