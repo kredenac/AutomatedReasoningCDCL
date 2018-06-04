@@ -24,8 +24,30 @@ int main(int argc, char **argv)
         //std::cout << "type in cnf file name" << std::endl;
         //std::string fname;
         //std::cin >> fname;
-        std::vector<std::string> tests {"test-SAT.cnf", "test-UNSAT.cnf", "sudoku.cnf", "sat.cnf", "unsat.cnf"};
-        dimacsStream = std::ifstream{"../source/" + tests[4]};
+        std::vector<std::string> tests {"test-SAT.cnf", "test-UNSAT.cnf", "sat.cnf", "unsat.cnf", "sudoku.cnf"};
+        std::vector<bool> expected {true, false, true, false, true};
+        // run tests
+        for (unsigned i = 0; i < tests.size() - 1; i++)
+        {
+            std::string str = tests[i];
+            dimacsStream = std::ifstream{"../source/" + str};
+
+            Solver t{dimacsStream};
+            t.UseLearning = true;
+            OptionalPartialValuation solution = t.solve();
+            dimacsStream.close();
+
+            if (solution.operator bool() == expected[i])
+            {
+                std::cout << "test #" << i << "passed" << std::endl;
+            }
+            else
+            {
+                std::cout << "test #" << i << "failed" << std::endl;
+            }
+        }
+        const unsigned runWhich = 3;
+        dimacsStream = std::ifstream{"../source/" + tests[runWhich]};
     }
     else
     {
@@ -48,9 +70,11 @@ int main(int argc, char **argv)
 
     std::clock_t c_end = std::clock();
     time_point finishTime = high_resolution_clock::now();
+    dimacsStream.close();
 
     if (solution)
     {
+        std::cout << "SAT" << std::endl;
         std::cout << solution.value() << std::endl;
     }
     else
@@ -58,6 +82,7 @@ int main(int argc, char **argv)
         std::cout << "UNSAT" << std::endl;
     }
 
+    std::cout << s.getInfo() << std::endl;
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(finishTime - startTime).count();
     long double time_elapsed_ms = 1000.0 * (c_end-c_start) / CLOCKS_PER_SEC;
     std::cout << "CPU time used: " << time_elapsed_ms  << " ms" << std::endl;

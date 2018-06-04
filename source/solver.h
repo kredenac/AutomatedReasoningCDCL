@@ -33,6 +33,8 @@ public:
      * @brief UseLearning whether learning clauses should be used
      */
     bool UseLearning;
+
+    std::string getInfo() const;
 private:
 
     /**

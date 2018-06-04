@@ -17,20 +17,20 @@ Clause Solver::findResponsibleLiterals(Clause& conflict)
 
     auto stack = m_valuation.stack();
 
-    unsigned i;
 
-    for (i = stack.size() - 1; stack[i].hasReason() && i > 0; i--)
+    while(m_valuation.stackSize() && m_valuation.back().hasReason())
     {
-        // std::cout << stack[i].lit << " was set because of: " << *stack[i].reason << std::endl;
-        reason = resolution(reason, *stack[i].reason);
-        // std::cout << "reason is now = " << reason << std::endl;
+        reason = resolution(reason, *stack.back().reason);
+        m_valuation.pop();
     }
+//    unsigned i;
 
-
-    if (i == 0)
-    {
-        // TODO I think that it is unsatisfiable?
-    }
+//    for (i = stack.size() - 1; stack[i].hasReason() && i > 0; i--)
+//    {
+//        // std::cout << stack[i].lit << " was set because of: " << *stack[i].reason << std::endl;
+//        reason = resolution(reason, *stack[i].reason);
+//        // std::cout << "reason is now = " << reason << std::endl;
+//    }
 
     if (reason == conflict)
     {
@@ -157,6 +157,7 @@ OptionalPartialValuation Solver::solve()
 //            std::cout << std::endl << "conflict in " << *conflict << std::endl;
             if (UseLearning)
             {
+                m_valuation.updateWeights(*conflict);
                 bool isUnsat = learnClause(conflict);
                 if (isUnsat)
                 {
@@ -197,7 +198,8 @@ OptionalPartialValuation Solver::solve()
             // deciding a literal
 
             // todo heuristic here
-            l = m_valuation.firstUndefined();
+            // l = m_valuation.firstUndefined();
+            l = m_valuation.decideHeuristic();
 //            std::cout << "decide = " << l << std::endl;
             if (l)
             {
@@ -210,6 +212,15 @@ OptionalPartialValuation Solver::solve()
             }
         }
     }
+}
+
+std::string Solver::getInfo() const
+{
+    return "stack size = " + std::to_string(m_valuation.stackSize()) +
+            "\ndecides = " + std::to_string(m_valuation.decides.size()) +
+            "\nlearned clauses = " + std::to_string(m_learned.size()) +
+            "\nunit propagations = " + "unknown" +
+            "\nrestarts = " + std::to_string(0);
 }
 
 Clause* Solver::hasConflict() const

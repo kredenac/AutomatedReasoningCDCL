@@ -57,6 +57,7 @@ void PartialValuation::updateWeights()
     );
 }
 
+// TODO optimise
 Literal PartialValuation::decideHeuristic()
 {
     // Variable State Independent Decaying Sum
