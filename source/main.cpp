@@ -24,7 +24,8 @@ int main(int argc, char **argv)
         //std::cout << "type in cnf file name" << std::endl;
         //std::string fname;
         //std::cin >> fname;
-        dimacsStream = std::ifstream{"../source/test-UNSAT.cnf"};
+        std::vector<std::string> tests {"test-SAT.cnf", "test-UNSAT.cnf", "sudoku.cnf", "sat.cnf", "unsat.cnf"};
+        dimacsStream = std::ifstream{"../source/" + tests[3]};
     }
     else
     {
@@ -42,7 +43,7 @@ int main(int argc, char **argv)
     std::clock_t c_start = std::clock();
 
     Solver s{dimacsStream};
-    s.UseLearning = false;
+    s.UseLearning = true;
     OptionalPartialValuation solution = s.solve();
 
     std::clock_t c_end = std::clock();

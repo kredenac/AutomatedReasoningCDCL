@@ -8,7 +8,35 @@ PartialValuation::PartialValuation(unsigned nVars)
     m_stack()
 {
     m_stack.reserve(nVars * c_stackSizeMultiplier);
+}
 
+void PartialValuation::ClearVariable(Literal l)
+{
+    unsigned pos = abs(l);
+    m_values[pos].level = 0;
+    m_values[pos].value = Tribool::Undefined;
+}
+
+void PartialValuation::pop()
+{
+    Choise c = m_stack.back();
+    if (c.isDecided)
+    {
+        decides.erase(std::remove(decides.begin(), decides.end(), c.lit), decides.end());
+    }
+
+    ClearVariable(c.lit);
+    m_stack.pop_back();
+}
+
+unsigned PartialValuation::stackSize() const
+{
+    return m_stack.size();
+}
+
+Choise& PartialValuation::back() const
+{
+    return const_cast<Choise&>(m_stack.back());
 }
 
 void PartialValuation::updateWeights(Clause& c)
@@ -47,7 +75,7 @@ Literal PartialValuation::decideHeuristic()
 
 void PartialValuation::push(Literal l, Clause* reason)
 {
-   push(l, false, reason);
+    push(l, false, reason);
 }
 
 void PartialValuation::push(Literal l, bool isDecided, Clause* reason)
@@ -59,18 +87,27 @@ void PartialValuation::push(Literal l, bool isDecided, Clause* reason)
     // if decide literal
     if (isDecided)
     {
+        decides.push_back(l);
         level++;
     }
     m_values[pos].level = level;
     if (isDecided)
     {
-        m_stack.emplace_back(l, level, isDecided);
+        std::cout << "new decide.level = " << level << std::endl;
+        m_stack.emplace_back(l, level, true);
         return;
     }
-    m_stack.emplace_back(l, level, reason);
+    else if (reason)
+    {
+        m_stack.emplace_back(l, level, reason);
+    }
+    else // doesn't have a reason and it's not decided => it's a negation of previously decided literal
+    {
+        m_stack.emplace_back(l, level, false);
+    }
 }
 
-Literal PartialValuation::backtrack()
+Literal PartialValuation::backjump()
 {
     if (m_stack.empty())
     {
@@ -80,10 +117,7 @@ Literal PartialValuation::backtrack()
 
     do {
         Choise last = m_stack.back();
-        m_stack.pop_back();
-        unsigned pos = abs(last.lit);
-        m_values[pos].value = Tribool::Undefined;
-        m_values[pos].level = 0;
+        pop();
 
         if (last.isDecided)
         {
@@ -94,7 +128,7 @@ Literal PartialValuation::backtrack()
     return NullLiteral;
 }
 
-bool PartialValuation::backtrack(Clause& reason)
+bool PartialValuation::backjump(Clause& reason)
 {
     if (m_stack.empty())
     {
@@ -110,19 +144,35 @@ bool PartialValuation::backtrack(Clause& reason)
 
     if (reason.size() < 2)
     {
-        throw "reason clause is smaller than 2!";
-    }
+        if (reason.size() == 0)
+        {
+            throw std::runtime_error("reason clause has 0 elements");
+        }
+        //std::cout << "reason has " << reason.size() << " elements" << std::endl;
+        //std::cout << " and it is " << reason.back() << std::endl;
 
+        Literal l = reason.back();
+        // TODO remember learned literal for restarts
+
+        // set its value
+        m_values[abs(l)].value = l > 0 ? Tribool::True : Tribool::False;
+        std::cout << "WARNING : HANDLE THIS" << std::endl;
+        throw std::runtime_error("todo - think about this");
+        return true;
+    }
+    std::cout << "reason = " << reason << std::endl;
+    std::cout << "levels = " << levels << std::endl;
     std::nth_element(levels.begin(), levels.end() - 2, levels.end());
-    unsigned secondMostLvl = reason[reason.size() - 2];
+    // TODO no need to sort the whole vector
+    // todo delete std::sort(levels.begin(), levels.end());
+    //bool shouldPopMore = levels.back() == levels[levels.size() - 1];
+
+    unsigned secondMostLvl = levels[levels.size() - 2];
+    std::cout << "pop everything > " << secondMostLvl << std::endl;
 
     while(m_stack.back().level > secondMostLvl)
     {
-        auto l = m_stack.back().lit;
-        unsigned pos = abs(l);
-        m_values[pos].value = Tribool::Undefined;
-        m_values[pos].level = 0;
-        m_stack.pop_back();
+        pop();
     }
     return true;
 }
@@ -177,7 +227,6 @@ Literal PartialValuation::isClauseUnit(const Clause &c) const
 
 Literal PartialValuation::firstUndefined() const
 {
-    // todo why does this compile?
     auto it = std::find(m_values.cbegin()+1, m_values.cend(), c_defaultLiteralInfo);
     return it != m_values.cend() ? it-m_values.cbegin() : NullLiteral;
 }
@@ -190,7 +239,6 @@ void PartialValuation::reset(unsigned nVars)
     m_stack.clear();
     m_stack.reserve(nVars * c_stackSizeMultiplier);
 }
-
 
 std::ostream &operator<<(std::ostream &out, const PartialValuation &pval)
 { 

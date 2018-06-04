@@ -37,8 +37,34 @@ std::ostream& operator<<(std::ostream &out, const PartialValuation &pval);
 class PartialValuation
 {
 public:
+    // used for debugging
+    std::vector<Literal> decides;
+    void getValues(Clause * c) const
+    {
+        for (unsigned i=0; i < c->size(); i++)
+        {
+            auto tribool = m_values[abs(c->at(i))].value;
+            if (tribool == Tribool::True)
+            {
+                std::cout << "T";
+            }
+            else if (tribool == Tribool::False)
+            {
+                std::cout << "F";
+            }
+            else
+            {
+                std::cout << "U";
+            }
+
+            std::cout << ", ";
+        }
+    }
+
+    //
     PartialValuation(unsigned nVars = 0);
 
+    unsigned stackSize() const;
     /**
      * @brief updateWeights - increases the weights of literals in a given clause
      * @param c - learnt clause
@@ -66,17 +92,27 @@ public:
     void push(Literal l, bool isDecided, Clause* reason = nullptr);
 
     /**
+     * @brief pop the top of the stack of valuation
+     */
+    void pop();
+
+    /**
+     * @brief back - gets the choise from top of the stack
+     * @return the choise on top of the stack
+     */
+    Choise& back() const;
+    /**
     * @brief backtrack - skida literale sa steka sve do prvog decide literala na koji naidje
     * @return poslednji decide literal ili NullLiteral ukoliko takvog nema
     */
-    Literal backtrack();
+    Literal backjump();
 
     /**
-     * @brief backtrack to when the first-assigned variable involved in the conflict was assigned
+     * @brief backtrack to when the 2nd most level variable involved in the conflict was assigned
      * @param cut - clause of variables involved in the conflict
-     * @return if backtracking succeeded or not
+     * @return if backtracking succeeded or not (case of failure means UNSAT)
      */
-    bool backtrack(Clause& cut);
+    bool backjump(Clause& learned);
 
     /**
     * @brief isClauseFalse - proverava da li je klauza netacna u tekucoj parcijalnoj valuaciji.
@@ -116,8 +152,19 @@ public:
     */
     void reset(unsigned nVars);
 
+    std::vector<Choise>& stack()
+    {
+        return m_stack;
+    }
+
     friend std::ostream& operator<<(std::ostream &out, const PartialValuation &pval);
 private:
+
+    /**
+     * @brief ClearVariable - clears info of variable which the given literal is referring to
+     * @param l - literal whose variable shall be cleared
+     */
+    void ClearVariable(Literal l);
 
     /**
      * @brief divideWeightsBy how much to divide weigts when calling their update
@@ -136,7 +183,7 @@ private:
     std::vector<LiteralInfo> m_values;
 
     /**
-    * @brief m_stack - stek na kome cuvamo istoriju postavljanja vrednosti promenljivih zbog vracanja unazad
+    * @brief m_stack - holds the history of selected literals
     */
     std::vector<Choise> m_stack;
 };

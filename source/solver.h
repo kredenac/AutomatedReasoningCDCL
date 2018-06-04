@@ -35,7 +35,13 @@ public:
     bool UseLearning;
 private:
 
-    Clause resolution(Clause& a, Clause& b);
+    /**
+     * @brief resolution - resolves clause a with b
+     * @param a - clause whose one variable needs to be resolved
+     * @param b - clause that may be used to resolve variable from both a and b
+     * @return resolved a and b, if b couldn't resolve variable from a, then returns a
+     */
+    Clause resolution(Clause& a, Clause& b) const;
 
     const std::string DimacsWrongFormat = "Wrong input format of DIMACS stream";
 
@@ -55,7 +61,7 @@ private:
     /**
      * @brief LearnClause - lears a new clause by inferring from a conflicing clause
      * @param conflict - first clause that wasn't satisfiable with a current valuation
-     * @return whether or not a new clause was learnt
+     * @return true if it's found out that formula is UNSAT, false otherwise
      */
     bool learnClause(Clause* conflict);
 
@@ -66,7 +72,7 @@ private:
      */
     Clause negateClauseLiterals(Clause& conflict) const;
 
-    Clause findResponsibleLiterals(Clause& conflict) const;
+    Clause findResponsibleLiterals(Clause& conflict);
 private:
     CNFFormula m_learned;
     CNFFormula m_formula;

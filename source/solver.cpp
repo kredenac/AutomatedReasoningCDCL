@@ -11,14 +11,37 @@ Solver::Solver(const CNFFormula &formula)
 {
 }
 
-// TODO this is just a dummy
-Clause Solver::findResponsibleLiterals(Clause& conflict) const
+Clause Solver::findResponsibleLiterals(Clause& conflict)
 {
+    Clause reason(conflict);
 
-    return conflict;
+    auto stack = m_valuation.stack();
+
+    unsigned i;
+
+    for (i = stack.size() - 1; !stack[i].isDecided && i > 0; i--)
+    {
+        std::cout << stack[i].lit << " was set because of: " << *stack[i].reason << std::endl;
+        reason = resolution(reason, *stack[i].reason);
+        std::cout << "reason is now = " << reason << std::endl;
+    }
+
+
+    if (i == 0)
+    {
+        // TODO I think that it is unsatisfiable?
+    }
+
+    if (reason == conflict)
+    {
+        std::cout << "wtf?" << std::endl;
+        throw std::runtime_error("Reason == conflict, it's prob not a wanted behaviour");
+    }
+
+    return reason;
 }
 
-Clause Solver::resolution(Clause& a, Clause& b)
+Clause Solver::resolution(Clause& a, Clause& b) const
 {
     std::set<Literal> literals(a.begin(), a.end());
     literals.insert(b.begin(), b.end());
@@ -34,7 +57,7 @@ Clause Solver::resolution(Clause& a, Clause& b)
             }
         }
     }
-    return Clause();
+    return a;
 }
 
 Clause Solver::negateClauseLiterals(Clause& cut) const
@@ -54,22 +77,25 @@ bool Solver::learnClause(Clause* conflict)
     {
         throw std::runtime_error("Delete this: bug - conflict clause is null");
     }
-    // 1. Find the cut in the implication graph that led to the conflict
-    auto cutClause = findResponsibleLiterals(*conflict);
+    // Find the cut in the implication graph that led to the conflict
+    auto reasonClause = findResponsibleLiterals(*conflict);
+    std::cout << "findResponsibleLiterals done" << std::endl;
+    if (reasonClause.empty())
+    {
+        // empty clause => UNSAT
+        return true;
+    }
+    m_learned.push_back(reasonClause);
 
-    // 2. Derive a new clause which is the negation of the assignments that led to the conflict
-    auto newClause = negateClauseLiterals(cutClause);
-    m_learned.push_back(newClause);
-
-    // 3. Non-chronologically backtrack ("back jump") to the appropriate decision level, where the first-assigned variable involved in the conflict was assigned
-    // u nekim slajdovima pise da je Assertion level drugi najveci...
-    auto lit = m_valuation.backtrack(newClause);
-    return lit != NullLiteral;
+    // Non-chronologically backtrack ("back jump")
+    std::cout << "reason = " << reasonClause << std::endl;
+    bool successful = m_valuation.backjump(reasonClause);
+    return !successful;
 }
 
 Solver::Solver(std::istream &dimacsStream)
 {
-    /* Citamo uvodne komentare, preskacemo prazne linije */
+    // skip comments and empty lines
     std::string line;
     std::size_t firstNonSpaceIdx;
     while (std::getline(dimacsStream, line))
@@ -81,7 +107,7 @@ Solver::Solver(std::istream &dimacsStream)
         }
     }
 
-    /* Proveravamo da smo procitali liniju 'p cnf brPromenljivih brKlauza' */
+    // problem line
     if (line[firstNonSpaceIdx] != 'p')
     {
         throw std::runtime_error{DimacsWrongFormat};
@@ -98,7 +124,7 @@ Solver::Solver(std::istream &dimacsStream)
         throw std::runtime_error{DimacsWrongFormat};
     }
 
-    /* Citamo klauze linije po liniju preskacuci komentare i prazne linije */
+    // read clauses whilst ignoring comments and empty lines
     m_valuation.reset(varCnt);
     m_formula.resize(claCnt);
     int clauseIdx = 0;
@@ -110,7 +136,8 @@ Solver::Solver(std::istream &dimacsStream)
             parser.clear();
             parser.str(line);
             std::copy(std::istream_iterator<int>{parser}, {}, std::back_inserter(m_formula[clauseIdx]));
-            m_formula[clauseIdx++].pop_back(); /* izbacujemo nulu sa kraja linije */
+            // remove trailing 0
+            m_formula[clauseIdx++].pop_back();
         }
     }
 }
@@ -124,37 +151,51 @@ OptionalPartialValuation Solver::solve()
         Clause* unitClause;
         if ((conflict = hasConflict()))
         {
+            std::cout << std::endl << "conflict in " << *conflict << std::endl;
             if (UseLearning)
             {
-                bool hasLearned = learnClause(conflict);
-
-                if (hasLearned)
+                bool isUnsat = learnClause(conflict);
+                if (isUnsat)
                 {
-                    continue;
+                    return {};
                 }
-                throw std::runtime_error("Solver::solve Tried to learn but didn't");
+                std::cout << "num of learned clauses = " << m_learned.size() << std::endl;
+                std::cout << "last learned = " << m_learned.back() << std::endl;
+                std::cout << "decides = " << m_valuation.decides << std::endl;
+                std::cout << "values = ";
+                m_valuation.getValues(&m_learned.back());
+                std::cout << std::endl;
             }
-
-            Literal decidedLiteral = m_valuation.backtrack();
-            if (NullLiteral == decidedLiteral)
+            else
             {
-                // no more backtracking, we've tried out all valuations
-                return {};
-            }
+                Literal decidedLiteral = m_valuation.backjump();
+                if (NullLiteral == decidedLiteral)
+                {
+                    // no more backtracking, we've tried out all valuations
+                    return {};
+                }
 
-            // try with opposide literal value
-            m_valuation.push(-decidedLiteral, false);
+                // try with opposide literal value
+                m_valuation.push(-decidedLiteral, false);
+            }
         }
         else if ((unitClause = hasUnitClause(l)))
         {
             // unit prop with stored unitClause
+            std::cout << "unit prop:" << (l>0? "" : "~") << "p" << abs(l) << std::endl;
+            if (unitClause->empty())
+            {
+                throw std::runtime_error("unit props unit clause has 0 elements.");
+            }
             m_valuation.push(l, unitClause);
         }
         else
         {
             // deciding a literal
+
             // todo heuristic here
             l = m_valuation.firstUndefined();
+            std::cout << "decide = " << l << std::endl;
             if (l)
             {
                 m_valuation.push(l, true);

@@ -3,10 +3,25 @@
 
 #include <vector>
 #include <cstdint>
+#include <ostream>
+#include <iterator>
 
 using Literal = int;
 using Clause = std::vector<Literal>;
 
+/**
+ * Template for printing out vectors into streams
+ */
+template <typename T>
+std::ostream& operator << (std::ostream& out, const std::vector<T>& v) {
+    if ( !v.empty() )
+    {
+        out << '[';
+        std::copy (v.begin(), v.end(), std::ostream_iterator<T>(out, ", "));
+        out << "\b\b]";
+    }
+    return out;
+}
 
 /**
  * @brief The Tribool enum - koristimo da kodiramo 3 vrednosti za promenljivu u parcijalnoj valuaciji.
@@ -30,13 +45,9 @@ public:
 
     LiteralInfo() : value(Tribool::Undefined), level(0), weight(0)
     {
-
     }
 
-    bool operator == (const LiteralInfo& op2) const
-    {
-        return op2.value == value && op2.level == level && op2.weight == op2.weight;
-    }
+    bool operator == (const LiteralInfo& op2) const;
 
     Tribool value;
     unsigned level;
@@ -66,6 +77,9 @@ public:
     {
 
     }
+
+    bool hasReason() const;
+
     Literal lit;
     unsigned level;
     Clause* reason;
