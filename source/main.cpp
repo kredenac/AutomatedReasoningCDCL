@@ -11,7 +11,7 @@
 using std::chrono::high_resolution_clock;
 using time_point = std::chrono::high_resolution_clock::time_point;
 
-// TODO faster way of finding unit clauses
+// TODO faster way of finding unit clauses (watch pointers)
 // TODO clause needs to be more sophisticated than just a vector.
 
 int main(int argc, char **argv)
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
                 std::cout << "test #" << i << "failed" << std::endl;
             }
         }
-        const unsigned runWhich = 3;
+        const unsigned runWhich = 4;
         dimacsStream = std::ifstream{"../source/" + tests[runWhich]};
     }
     else
