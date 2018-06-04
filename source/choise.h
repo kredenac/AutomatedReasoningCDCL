@@ -52,7 +52,7 @@ public:
      * @brief Choise constructor of decided literal or its negation afterwards
      * @param lit
      */
-    Choise(Literal lit, unsigned level, bool isDecided) : lit(lit), level(level), isDecided(isDecided)
+    Choise(Literal lit, unsigned level, bool isDecided) : lit(lit), level(level), reason(nullptr), isDecided(isDecided)
     {
 
     }
@@ -62,7 +62,7 @@ public:
      * @param l
      * @param reason clause
      */
-    Choise(Literal l, unsigned level, Clause* reason = nullptr) : lit(l), level(level), reason(reason), isDecided(false)
+    Choise(Literal l, unsigned level, Clause* reason) : lit(l), level(level), reason(reason), isDecided(false)
     {
 
     }

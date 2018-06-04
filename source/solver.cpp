@@ -1,5 +1,6 @@
 #include "solver.h"
 
+#include <set>
 #include <string>
 #include <sstream>
 #include <stdexcept>
@@ -13,9 +14,28 @@ Solver::Solver(const CNFFormula &formula)
 // TODO this is just a dummy
 Clause Solver::findResponsibleLiterals(Clause& conflict) const
 {
+
     return conflict;
 }
 
+Clause Solver::resolution(Clause& a, Clause& b)
+{
+    std::set<Literal> literals(a.begin(), a.end());
+    literals.insert(b.begin(), b.end());
+    for (Literal i : a)
+    {
+        for (Literal j : b)
+        {
+            if (i == -j)
+            {
+                literals.erase(i);
+                literals.erase(-i);
+                return Clause(literals.begin(), literals.end());
+            }
+        }
+    }
+    return Clause();
+}
 
 Clause Solver::negateClauseLiterals(Clause& cut) const
 {
@@ -100,10 +120,11 @@ OptionalPartialValuation Solver::solve()
     while (true)
     {
         Literal l;
-        Clause * conflict;
+        Clause* conflict;
+        Clause* unitClause;
         if ((conflict = hasConflict()))
         {
-            if (false)
+            if (UseLearning)
             {
                 bool hasLearned = learnClause(conflict);
 
@@ -111,6 +132,7 @@ OptionalPartialValuation Solver::solve()
                 {
                     continue;
                 }
+                throw std::runtime_error("Solver::solve Tried to learn but didn't");
             }
 
             Literal decidedLiteral = m_valuation.backtrack();
@@ -121,67 +143,68 @@ OptionalPartialValuation Solver::solve()
             }
 
             // try with opposide literal value
-            m_valuation.push(-decidedLiteral);
+            m_valuation.push(-decidedLiteral, false);
         }
-        else if ((l = hasUnitClause()))
+        else if ((unitClause = hasUnitClause(l)))
         {
-            /* Propagacija jedinicne klauze */
-            m_valuation.push(l);
+            // unit prop with stored unitClause
+            m_valuation.push(l, unitClause);
         }
         else
         {
-            /* Decide pravilo */
+            // deciding a literal
+            // todo heuristic here
             l = m_valuation.firstUndefined();
             if (l)
             {
-                m_valuation.push(l);
+                m_valuation.push(l, true);
             }
             else
             {
-                /* Ne mozemo da primenimo decide jer imamo punu valuaciju -> formula je zadovoljena */
+                // if no literal was decided, then it's a full valuation - SAT
                 return m_valuation;
             }
         }
     }
 }
 
-Clause* Solver::hasConflict()
+Clause* Solver::hasConflict() const
 {
     // first checking learned clauses
-    for (Clause& c : m_learned)
+    for (const Clause& c : m_learned)
     {
         if (m_valuation.isClauseFalse(c))
         {
-            return &c;
+            return const_cast<Clause*>(&c);
         }
     }
-    for (Clause& c : m_formula)
+    for (const Clause& c : m_formula)
     {
         if (m_valuation.isClauseFalse(c))
-        {
-            return &c;
+        {   
+            return const_cast<Clause*>(&c);
         }
     }
     return nullptr;
 }
 
-Literal Solver::hasUnitClause() const
+Clause* Solver::hasUnitClause(Literal & l) const
 {
-    Literal l;
     // first checking learned clauses
     for (const Clause &c : m_learned)
     {
         if ((l = m_valuation.isClauseUnit(c)))
         {
-            return l;
+            return const_cast<Clause*>(&c);
         }
     }
     for (const Clause &c : m_formula)
     {
         if ((l = m_valuation.isClauseUnit(c)))
         {
-            return l;
+            return const_cast<Clause*>(&c);
         }
     }
-    return NullLiteral;
+    l = NullLiteral;
+    return nullptr;
 }

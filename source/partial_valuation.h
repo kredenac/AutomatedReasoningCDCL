@@ -61,7 +61,9 @@ public:
     * @param reason - pointer to clause which is a reason for unit prop.
     * default nullptr when it's a decided literal
     */
-    void push(Literal l, Clause* reason = nullptr);
+    void push(Literal l, Clause* reason);
+
+    void push(Literal l, bool isDecided, Clause* reason = nullptr);
 
     /**
     * @brief backtrack - skida literale sa steka sve do prvog decide literala na koji naidje

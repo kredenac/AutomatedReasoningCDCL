@@ -11,9 +11,8 @@
 using std::chrono::high_resolution_clock;
 using time_point = std::chrono::high_resolution_clock::time_point;
 
-// odavde sam gledao slajdove, al ne govore sve isto
-// http://ssa-school-2016.it.uu.se/wp-content/uploads/2016/06/LaurentSimon.pdf
-// https://www.slideshare.net/sakai/how-a-cdcl-sat-solver-works
+// TODO faster way of finding unit clauses
+// TODO clause needs to be more sophisticated than just a vector.
 
 int main(int argc, char **argv)
 {
@@ -25,7 +24,7 @@ int main(int argc, char **argv)
         //std::cout << "type in cnf file name" << std::endl;
         //std::string fname;
         //std::cin >> fname;
-        dimacsStream = std::ifstream{"../source/sudoku.cnf"};
+        dimacsStream = std::ifstream{"../source/test-UNSAT.cnf"};
     }
     else
     {
@@ -61,7 +60,7 @@ int main(int argc, char **argv)
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(finishTime - startTime).count();
     long double time_elapsed_ms = 1000.0 * (c_end-c_start) / CLOCKS_PER_SEC;
     std::cout << "CPU time used: " << time_elapsed_ms  << " ms" << std::endl;
-    std::cout << "Total time elapsed = " << duration << " ms" << std::endl;
+    std::cout << "Total time elapsed = " << duration / 1000.0 << " ms" << std::endl;
     return 0;
 }
 

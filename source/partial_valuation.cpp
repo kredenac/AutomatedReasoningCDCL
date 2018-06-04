@@ -47,17 +47,26 @@ Literal PartialValuation::decideHeuristic()
 
 void PartialValuation::push(Literal l, Clause* reason)
 {
-    /* Promenljivu od literala dobijamo sa std::abs, a za polaritet proveravamo znak */
+   push(l, false, reason);
+}
+
+void PartialValuation::push(Literal l, bool isDecided, Clause* reason)
+{
     unsigned pos = std::abs(l);
     m_values[pos].value = l > 0 ? Tribool::True : Tribool::False;
-    unsigned level = m_stack.back().level;
+    unsigned level = m_stack.empty() ? 1 : m_stack.back().level;
 
     // if decide literal
-    if (!reason)
+    if (isDecided)
     {
         level++;
     }
     m_values[pos].level = level;
+    if (isDecided)
+    {
+        m_stack.emplace_back(l, level, isDecided);
+        return;
+    }
     m_stack.emplace_back(l, level, reason);
 }
 
@@ -76,16 +85,13 @@ Literal PartialValuation::backtrack()
         m_values[pos].value = Tribool::Undefined;
         m_values[pos].level = 0;
 
-        /* Ako je on NullLiteral, tj. rampa vracamo lastDecide literal */
-        if (last.isDecided())
+        if (last.isDecided)
         {
-            m_stack.push_back(last);
-            // m_stack.back().reason = ????
-            break;
+            return last.lit;
         }
     } while (m_stack.size());
 
-    return last == NullLiteral ? lastDecide : NullLiteral;
+    return NullLiteral;
 }
 
 bool PartialValuation::backtrack(Clause& reason)

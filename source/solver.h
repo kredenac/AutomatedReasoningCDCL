@@ -29,9 +29,13 @@ public:
     */
     OptionalPartialValuation solve();
 
-
+    /**
+     * @brief UseLearning whether learning clauses should be used
+     */
     bool UseLearning;
 private:
+
+    Clause resolution(Clause& a, Clause& b);
 
     const std::string DimacsWrongFormat = "Wrong input format of DIMACS stream";
 
@@ -39,13 +43,14 @@ private:
      * @brief checks if there is a conflict with the current valuation
      * @return conflicting clause if it exists, nullptr otherwise
      */
-    Clause* hasConflict();
+    Clause* hasConflict() const;
 
     /**
     * @brief hasUnitClause
-    * @return
+    * @param l - literal will be asigned if it's a unit clause, nullLiteral if it isn't
+    * @return a unit clause, nullptr if there isn't one
     */
-    Literal hasUnitClause() const;
+    Clause* hasUnitClause(Literal& l) const;
 
     /**
      * @brief LearnClause - lears a new clause by inferring from a conflicing clause
