@@ -6,10 +6,10 @@
 #include <stdexcept>
 #include <iterator>
 
-Solver::Solver(const CNFFormula &formula)
-  : m_formula(formula), m_valuation(m_formula.size())
-{
-}
+//Solver::Solver(const CNFFormula &formula)
+//  : m_formula(formula), m_valuation(m_formula.size())
+//{
+//}
 
 Clause Solver::findResponsibleLiterals(Clause& conflict)
 {
@@ -19,11 +19,11 @@ Clause Solver::findResponsibleLiterals(Clause& conflict)
 
     unsigned i;
 
-    for (i = stack.size() - 1; !stack[i].isDecided && i > 0; i--)
+    for (i = stack.size() - 1; stack[i].hasReason() && i > 0; i--)
     {
-        std::cout << stack[i].lit << " was set because of: " << *stack[i].reason << std::endl;
+        // std::cout << stack[i].lit << " was set because of: " << *stack[i].reason << std::endl;
         reason = resolution(reason, *stack[i].reason);
-        std::cout << "reason is now = " << reason << std::endl;
+        // std::cout << "reason is now = " << reason << std::endl;
     }
 
 
@@ -34,8 +34,8 @@ Clause Solver::findResponsibleLiterals(Clause& conflict)
 
     if (reason == conflict)
     {
-        std::cout << "wtf?" << std::endl;
-        throw std::runtime_error("Reason == conflict, it's prob not a wanted behaviour");
+        std::cout << "I'm not 100% sure about where to handle this, but it's UNSAT." << std::endl;
+        return Clause();
     }
 
     return reason;
@@ -71,6 +71,7 @@ Clause Solver::negateClauseLiterals(Clause& cut) const
     return c;
 }
 
+// TODO why is 1st element on stack lvl 2?
 bool Solver::learnClause(Clause* conflict)
 {
     if (conflict == nullptr)
@@ -79,7 +80,7 @@ bool Solver::learnClause(Clause* conflict)
     }
     // Find the cut in the implication graph that led to the conflict
     auto reasonClause = findResponsibleLiterals(*conflict);
-    std::cout << "findResponsibleLiterals done" << std::endl;
+
     if (reasonClause.empty())
     {
         // empty clause => UNSAT
@@ -88,7 +89,7 @@ bool Solver::learnClause(Clause* conflict)
     m_learned.push_back(reasonClause);
 
     // Non-chronologically backtrack ("back jump")
-    std::cout << "reason = " << reasonClause << std::endl;
+
     bool successful = m_valuation.backjump(reasonClause);
     return !successful;
 }
@@ -140,6 +141,8 @@ Solver::Solver(std::istream &dimacsStream)
             m_formula[clauseIdx++].pop_back();
         }
     }
+    // FIXME this doesn't guarantee that it will not be reallocated
+    m_learned.reserve(claCnt);
 }
 
 OptionalPartialValuation Solver::solve()
@@ -151,7 +154,7 @@ OptionalPartialValuation Solver::solve()
         Clause* unitClause;
         if ((conflict = hasConflict()))
         {
-            std::cout << std::endl << "conflict in " << *conflict << std::endl;
+//            std::cout << std::endl << "conflict in " << *conflict << std::endl;
             if (UseLearning)
             {
                 bool isUnsat = learnClause(conflict);
@@ -159,12 +162,12 @@ OptionalPartialValuation Solver::solve()
                 {
                     return {};
                 }
-                std::cout << "num of learned clauses = " << m_learned.size() << std::endl;
-                std::cout << "last learned = " << m_learned.back() << std::endl;
-                std::cout << "decides = " << m_valuation.decides << std::endl;
-                std::cout << "values = ";
-                m_valuation.getValues(&m_learned.back());
-                std::cout << std::endl;
+//                std::cout << "num of learned clauses = " << m_learned.size() << std::endl;
+//                std::cout << "last learned = " << m_learned.back() << std::endl;
+//                std::cout << "decides = " << m_valuation.decides << std::endl;
+//                std::cout << "values = ";
+//                m_valuation.getValues(&m_learned.back());
+//                std::cout << std::endl;
             }
             else
             {
@@ -182,7 +185,7 @@ OptionalPartialValuation Solver::solve()
         else if ((unitClause = hasUnitClause(l)))
         {
             // unit prop with stored unitClause
-            std::cout << "unit prop:" << (l>0? "" : "~") << "p" << abs(l) << std::endl;
+            // std::cout << "unit prop:" << (l>0? "" : "~") << "p" << abs(l) << std::endl;
             if (unitClause->empty())
             {
                 throw std::runtime_error("unit props unit clause has 0 elements.");
@@ -195,7 +198,7 @@ OptionalPartialValuation Solver::solve()
 
             // todo heuristic here
             l = m_valuation.firstUndefined();
-            std::cout << "decide = " << l << std::endl;
+//            std::cout << "decide = " << l << std::endl;
             if (l)
             {
                 m_valuation.push(l, true);

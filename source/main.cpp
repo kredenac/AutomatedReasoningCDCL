@@ -25,7 +25,7 @@ int main(int argc, char **argv)
         //std::string fname;
         //std::cin >> fname;
         std::vector<std::string> tests {"test-SAT.cnf", "test-UNSAT.cnf", "sudoku.cnf", "sat.cnf", "unsat.cnf"};
-        dimacsStream = std::ifstream{"../source/" + tests[3]};
+        dimacsStream = std::ifstream{"../source/" + tests[4]};
     }
     else
     {

@@ -15,7 +15,7 @@ public:
     * @brief Solver - konstruktor od CNF formule
     * @param formula - CNF za koji proveravamo zadovoljivost
     */
-    Solver(const CNFFormula &formula);
+//    Solver(const CNFFormula &formula);
 
     /**
     * @brief Solver - konstruktor od C++ stream-a iz koga se cita CNF u DIMACS formatu

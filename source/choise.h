@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <cstdint>
-#include <ostream>
+#include <iostream>
 #include <iterator>
 
 using Literal = int;
@@ -65,7 +65,10 @@ public:
      */
     Choise(Literal lit, unsigned level, bool isDecided) : lit(lit), level(level), reason(nullptr), isDecided(isDecided)
     {
-
+        if ((reason == nullptr || reason->empty()) && isDecided == false)
+        {
+            std::cout << "reason is empty" << std::endl;
+        }
     }
 
     /**
@@ -75,7 +78,10 @@ public:
      */
     Choise(Literal l, unsigned level, Clause* reason) : lit(l), level(level), reason(reason), isDecided(false)
     {
-
+        if (reason->empty() && isDecided == false)
+        {
+            std::cout << "reason is empty" << std::endl;
+        }
     }
 
     bool hasReason() const;

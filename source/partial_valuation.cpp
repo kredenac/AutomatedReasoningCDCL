@@ -93,7 +93,7 @@ void PartialValuation::push(Literal l, bool isDecided, Clause* reason)
     m_values[pos].level = level;
     if (isDecided)
     {
-        std::cout << "new decide.level = " << level << std::endl;
+//        std::cout << "new decide.level = " << level << std::endl;
         m_stack.emplace_back(l, level, true);
         return;
     }
@@ -142,35 +142,36 @@ bool PartialValuation::backjump(Clause& reason)
         levels[i] = m_values[abs(reason[i])].level;
     }
 
+    unsigned backjumpToLevel;
+
     if (reason.size() < 2)
     {
         if (reason.size() == 0)
         {
             throw std::runtime_error("reason clause has 0 elements");
         }
-        //std::cout << "reason has " << reason.size() << " elements" << std::endl;
-        //std::cout << " and it is " << reason.back() << std::endl;
 
+        // TODO remember learned literal for restarts (remembered it already in m_learned)
+
+        // unit prop should take care of it
+        // i think we should backtrack to the level of it in stack
         Literal l = reason.back();
-        // TODO remember learned literal for restarts
-
-        // set its value
-        m_values[abs(l)].value = l > 0 ? Tribool::True : Tribool::False;
-        std::cout << "WARNING : HANDLE THIS" << std::endl;
-        throw std::runtime_error("todo - think about this");
-        return true;
+        // if there's only one variable in learned clause, than it's only that decided literals fault
+        backjumpToLevel = m_values[abs(l)].level - 1;
     }
-    std::cout << "reason = " << reason << std::endl;
-    std::cout << "levels = " << levels << std::endl;
-    std::nth_element(levels.begin(), levels.end() - 2, levels.end());
-    // TODO no need to sort the whole vector
-    // todo delete std::sort(levels.begin(), levels.end());
-    //bool shouldPopMore = levels.back() == levels[levels.size() - 1];
+    else
+    {
+//        std::cout << "reason = " << reason << std::endl;
+//        std::cout << "levels = " << levels << std::endl;
+        std::nth_element(levels.begin(), levels.end() - 2, levels.end());
+        // TODO no need to sort the whole vector
+        backjumpToLevel = levels[levels.size() - 2];
+    }
 
-    unsigned secondMostLvl = levels[levels.size() - 2];
-    std::cout << "pop everything > " << secondMostLvl << std::endl;
 
-    while(m_stack.back().level > secondMostLvl)
+    // std::cout << "pop everything > " << backjumpToLevel << std::endl;
+
+    while(m_stack.size() && m_stack.back().level > backjumpToLevel)
     {
         pop();
     }
@@ -194,11 +195,9 @@ bool PartialValuation::isClauseFalse(const Clause &c) const
 
 Literal PartialValuation::isClauseUnit(const Clause &c) const
 {
-    /* Definisemo promenljive za broj nedefinisanih literala i poslednji nedefinisani literal */
     Literal undefinedLit = NullLiteral;
     int cntUndefined = 0;
 
-    /* Za svaki literal proveravamo da li je nedefinisan */
     for (Literal l : c)
     {
         Tribool valueInClause = l > 0 ? Tribool::True : Tribool::False;
@@ -210,7 +209,6 @@ Literal PartialValuation::isClauseUnit(const Clause &c) const
                 ++cntUndefined;
                 undefinedLit = l;
 
-                 /* Ako naidjemo na jos jedan nedefinisan literal - klauza nije jedinicna */
                 if (cntUndefined > 1)
                 {
                     break;
