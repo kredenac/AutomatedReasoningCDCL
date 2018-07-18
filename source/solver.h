@@ -4,6 +4,7 @@
 #include "partial_valuation.h"
 
 #include <iostream>
+#include <queue> // TODO delete queue from .cpp, or do somehting more pretty
 #include <experimental/optional>
 
 using OptionalPartialValuation = std::experimental::optional<PartialValuation>;
@@ -29,6 +30,10 @@ public:
     */
     OptionalPartialValuation solve();
 
+    ClauseIndex unitProp(std::queue<ClauseIndex> &unitClauses, std::queue<Literal> &unitLiterals);
+
+    OptionalPartialValuation solve2();
+
     /**
      * @brief UseLearning whether learning clauses should be used
      */
@@ -39,11 +44,12 @@ private:
 
     /**
      * @brief resolution - resolves clause a with b
-     * @param a - clause whose one variable needs to be resolved
-     * @param b - clause that may be used to resolve variable from both a and b
+     * @param reason - current explain clause
+     * @param b - top clause on the stack
+     * @param which - literal on which to resolve
      * @return resolved a and b, if b couldn't resolve variable from a, then returns a
      */
-    Clause resolution(Clause& a, Clause& b) const;
+    Clause resolution(Clause& reason, Clause& b, Literal& which) const;
 
     const std::string DimacsWrongFormat = "Wrong input format of DIMACS stream";
 
@@ -51,21 +57,21 @@ private:
      * @brief checks if there is a conflict with the current valuation
      * @return conflicting clause if it exists, nullptr otherwise
      */
-    Clause* hasConflict() const;
+    ClauseIndex hasConflict() const;
 
     /**
     * @brief hasUnitClause
     * @param l - literal will be asigned if it's a unit clause, nullLiteral if it isn't
     * @return a unit clause, nullptr if there isn't one
     */
-    Clause* hasUnitClause(Literal& l) const;
+    ClauseIndex hasUnitClause(Literal& l) const;
 
     /**
      * @brief LearnClause - lears a new clause by inferring from a conflicing clause
      * @param conflict - first clause that wasn't satisfiable with a current valuation
      * @return true if it's found out that formula is UNSAT, false otherwise
      */
-    bool learnClause(Clause* conflict);
+    bool learnClause(ClauseIndex conflict);
 
     /**
      * @brief newClauseFromConflicting - constructs a learned clause from a conflicting one
@@ -76,7 +82,7 @@ private:
 
     Clause findResponsibleLiterals(Clause& conflict);
 private:
-    CNFFormula m_learned;
+//    CNFFormula m_learned;
     CNFFormula m_formula;
     PartialValuation m_valuation;
 };

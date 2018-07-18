@@ -1,7 +1,7 @@
 #ifndef PARTIALVALUATION_H
 #define PARTIALVALUATION_H
 
-#include "choise.h"
+#include "choice.h"
 
 #include <vector>
 #include <iostream>
@@ -87,9 +87,9 @@ public:
     * @param reason - pointer to clause which is a reason for unit prop.
     * default nullptr when it's a decided literal
     */
-    void push(Literal l, Clause* reason);
+    void push(Literal l, ClauseIndex reason);
 
-    void push(Literal l, bool isDecided, Clause* reason = nullptr);
+    void push(Literal l, bool isDecided, ClauseIndex reason = -1);
 
     /**
      * @brief pop the top of the stack of valuation
@@ -97,10 +97,10 @@ public:
     void pop();
 
     /**
-     * @brief back - gets the choise from top of the stack
-     * @return the choise on top of the stack
+     * @brief back - gets the choice from top of the stack
+     * @return the choice on top of the stack
      */
-    Choise& back() const;
+    Choice& back() const;
     /**
     * @brief backtrack - skida literale sa steka sve do prvog decide literala na koji naidje
     * @return poslednji decide literal ili NullLiteral ukoliko takvog nema
@@ -152,9 +152,14 @@ public:
     */
     void reset(unsigned nVars);
 
-    std::vector<Choise>& stack()
+    std::vector<Choice>& stack()
     {
         return m_stack;
+    }
+
+    std::vector<LiteralInfo>& values()
+    {
+        return m_values;
     }
 
     friend std::ostream& operator<<(std::ostream &out, const PartialValuation &pval);
@@ -171,6 +176,7 @@ private:
      */
     const float divideWeightsBy = 2.0f;
 
+    // TODO: mi ne koristimo rampu, tako da nam ovo ne treba
     /**
      * @brief c_stackSizeMultiplier - for each decided literal there will be
      * a ramp, so possibly 2x number of literals in stack
@@ -185,7 +191,8 @@ private:
     /**
     * @brief m_stack - holds the history of selected literals
     */
-    std::vector<Choise> m_stack;
+    std::vector<Choice> m_stack;
+
 };
 
 #endif // PARTIALVALUATION_H

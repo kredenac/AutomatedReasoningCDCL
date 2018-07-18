@@ -1,0 +1,22 @@
+p cnf 8 7
+1 0
+2 0
+3 0
+-6 4 0
+-6 5 0
+-1 -2 -6 -5 0
+8 7 0
+c
+c
+c
+c learn -1 -2 -6
+c
+c unitProp 1        1
+c unitProp 2        1 2
+c decide 6          1 2 |6
+c unitProp 4        1 2 |6 4
+c unitProp 5        1 2 |6 4 5
+c conflict       reason: -1 -2 -6 -5 --->  -1 -2 -6
+c learn -1 -2 -6
+c backjump          1 2 
+c unitProp          1 2 -6

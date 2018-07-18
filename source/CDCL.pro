@@ -12,7 +12,7 @@ TEMPLATE = app
 SOURCES += main.cpp \
     partial_valuation.cpp \
     solver.cpp \
-    choise.cpp
+    choice.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -28,4 +28,4 @@ DEFINES += QT_DEPRECATED_WARNINGS
 HEADERS += \
     partial_valuation.h \
     solver.h \
-    choise.h
+    choice.h

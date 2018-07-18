@@ -19,7 +19,7 @@ void PartialValuation::ClearVariable(Literal l)
 
 void PartialValuation::pop()
 {
-    Choise c = m_stack.back();
+    Choice c = m_stack.back();
     if (c.isDecided)
     {
         decides.erase(std::remove(decides.begin(), decides.end(), c.lit), decides.end());
@@ -34,9 +34,9 @@ unsigned PartialValuation::stackSize() const
     return m_stack.size();
 }
 
-Choise& PartialValuation::back() const
+Choice& PartialValuation::back() const
 {
-    return const_cast<Choise&>(m_stack.back());
+    return const_cast<Choice&>(m_stack.back());
 }
 
 void PartialValuation::updateWeights(Clause& c)
@@ -74,12 +74,15 @@ Literal PartialValuation::decideHeuristic()
     return candidatePos;
 }
 
-void PartialValuation::push(Literal l, Clause* reason)
+// CHANGEME: Clause* --> ClauseIndex
+void PartialValuation::push(Literal l, ClauseIndex reason)
 {
     push(l, false, reason);
 }
 
-void PartialValuation::push(Literal l, bool isDecided, Clause* reason)
+// CHANGEME: Clause* --> ClauseIndex
+// else if (reason != -1)
+void PartialValuation::push(Literal l, bool isDecided, ClauseIndex reason)
 {
     unsigned pos = std::abs(l);
     m_values[pos].value = l > 0 ? Tribool::True : Tribool::False;
@@ -98,12 +101,13 @@ void PartialValuation::push(Literal l, bool isDecided, Clause* reason)
         m_stack.emplace_back(l, level, true);
         return;
     }
-    else if (reason)
+    else if (reason != -1)
     {
         m_stack.emplace_back(l, level, reason);
     }
     else // doesn't have a reason and it's not decided => it's a negation of previously decided literal
     {
+        // Uz ucenje klauza i backjumping nikada se ne ulazi ovde
         m_stack.emplace_back(l, level, false);
     }
 }
@@ -117,7 +121,7 @@ Literal PartialValuation::backjump()
 
 
     do {
-        Choise last = m_stack.back();
+        Choice last = m_stack.back();
         pop();
 
         if (last.isDecided)
@@ -237,6 +241,7 @@ void PartialValuation::reset(unsigned nVars)
 
     m_stack.clear();
     m_stack.reserve(nVars * c_stackSizeMultiplier);
+
 }
 
 std::ostream &operator<<(std::ostream &out, const PartialValuation &pval)

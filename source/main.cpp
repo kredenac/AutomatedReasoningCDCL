@@ -24,8 +24,8 @@ int main(int argc, char **argv)
         //std::cout << "type in cnf file name" << std::endl;
         //std::string fname;
         //std::cin >> fname;
-        std::vector<std::string> tests {"test-SAT.cnf", "test-UNSAT.cnf", "sat.cnf", "unsat.cnf", "sudoku.cnf"};
-        std::vector<bool> expected {true, false, true, false, true};
+        std::vector<std::string> tests {"plsWrk.cnf", "test-SAT.cnf", "test-UNSAT.cnf", "sat.cnf", "unsat.cnf", "sudoku.cnf"};
+        std::vector<bool> expected {true, true, false, true, false, true};
         // run tests
         for (unsigned i = 0; i < tests.size() - 1; i++)
         {
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
                 std::cout << "test #" << i << "failed" << std::endl;
             }
         }
-        const unsigned runWhich = 4;
+        const unsigned runWhich = tests.size()-1;
         dimacsStream = std::ifstream{"../source/" + tests[runWhich]};
     }
     else
@@ -60,6 +60,7 @@ int main(int argc, char **argv)
     }
     // std::cout << "sizeof long double = " << sizeof(long double) << std::endl; // some compilers print 16
 
+//    return 0;
 
     time_point startTime = high_resolution_clock::now();
     std::clock_t c_start = std::clock();
@@ -75,7 +76,7 @@ int main(int argc, char **argv)
     if (solution)
     {
         std::cout << "SAT" << std::endl;
-        std::cout << solution.value() << std::endl;
+//        std::cout << solution.value() << std::endl;
     }
     else
     {
@@ -90,9 +91,9 @@ int main(int argc, char **argv)
     return 0;
 }
 
-std::string getexepath()
-{
-    char result[1000];
-    ssize_t count = readlink( "/proc/self/exe", result, 1000);
-    return std::string( result, (count > 0) ? count : 0 );
-}
+//std::string getexepath()
+//{
+//    char result[1000];
+//    ssize_t count = readlink( "/proc/self/exe", result, 1000);
+//    return std::string( result, (count > 0) ? count : 0 );
+//}

@@ -1,8 +1,8 @@
-#include "choise.h"
+#include "choice.h"
 
-bool Choise::hasReason() const
+bool Choice::hasReason() const
 {
-    return reason != nullptr;
+    return reason != -1;
 }
 
 bool LiteralInfo::operator == (const LiteralInfo& op2) const
