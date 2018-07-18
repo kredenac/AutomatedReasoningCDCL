@@ -30,9 +30,9 @@ public:
     */
     OptionalPartialValuation solve();
 
-    ClauseIndex unitProp(std::queue<ClauseIndex> &unitClauses, std::queue<Literal> &unitLiterals);
-
     OptionalPartialValuation solve2();
+
+    ClauseIndex unitProp();
 
     /**
      * @brief UseLearning whether learning clauses should be used
@@ -81,10 +81,43 @@ private:
     Clause negateClauseLiterals(Clause& conflict) const;
 
     Clause findResponsibleLiterals(Clause& conflict);
+
+    void watchTwoLiterals(ClauseIndex clauseIdx);
+
+    void watchLit(Literal lit, ClauseIndex clauseIdx);
+
+    // TODO: deleteme, helper function
+    void printAllWatchedClauses()
+    {
+        for (unsigned i = 1; i < m_valuation.values().size(); ++i)
+//        for(LiteralInfo litInf : m_valuation.values())
+        {
+            std::cout << "\n";
+            LiteralInfo &litInf = m_valuation.values()[i];
+            std::cout << "Lit: " << i << std::endl;
+            std::cout << "  Pos Watched:" << std::endl;
+            for (ClauseIndex cl : litInf.posWatched)
+            {
+                std::cout << "    " << m_formula[cl] << std::endl;
+            }
+            std::cout << "  Neg Watched:" << std::endl;
+            for (ClauseIndex cl : litInf.negWatched)
+            {
+                std::cout << "    " << m_formula[cl] << std::endl;
+            }
+        }
+        std::cout << "\n\n";
+
+    }
+
 private:
 //    CNFFormula m_learned;
     CNFFormula m_formula;
     PartialValuation m_valuation;
+
+    // Queues for unit literals and reason clauses, used with two watched literals
+    std::queue<ClauseIndex> unitClauses;
+    std::queue<Literal> unitLiterals;
 };
 
 #endif // SOLVER_H

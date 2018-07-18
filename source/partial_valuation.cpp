@@ -12,7 +12,7 @@ PartialValuation::PartialValuation(unsigned nVars)
 
 void PartialValuation::ClearVariable(Literal l)
 {
-    unsigned pos = abs(l);
+    unsigned pos = std::abs(l);
     m_values[pos].level = 0;
     m_values[pos].value = Tribool::Undefined;
 }
@@ -43,7 +43,7 @@ void PartialValuation::updateWeights(Clause& c)
 {
     for (Literal l : c)
     {
-        m_values[abs(l)].weight += 1;
+        m_values[std::abs(l)].weight += 1;
     }
 }
 
@@ -144,7 +144,7 @@ bool PartialValuation::backjump(Clause& reason)
     std::vector<unsigned> levels(reason.size());
     for (unsigned i = 0; i < reason.size(); i++)
     {
-        levels[i] = m_values[abs(reason[i])].level;
+        levels[i] = m_values[std::abs(reason[i])].level;
     }
 
     unsigned backjumpToLevel;
@@ -162,7 +162,7 @@ bool PartialValuation::backjump(Clause& reason)
         // i think we should backtrack to the level of it in stack
         Literal l = reason.back();
         // if there's only one variable in learned clause, than it's only that decided literals fault
-        backjumpToLevel = m_values[abs(l)].level - 1;
+        backjumpToLevel = m_values[std::abs(l)].level - 1;
     }
     else
     {
@@ -241,7 +241,6 @@ void PartialValuation::reset(unsigned nVars)
 
     m_stack.clear();
     m_stack.reserve(nVars * c_stackSizeMultiplier);
-
 }
 
 std::ostream &operator<<(std::ostream &out, const PartialValuation &pval)

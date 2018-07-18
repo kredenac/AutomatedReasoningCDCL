@@ -151,7 +151,7 @@ Solver::Solver(std::istream &dimacsStream)
     // read clauses whilst ignoring comments and empty lines
     m_valuation.reset(varCnt);
     m_formula.resize(claCnt);
-    int clauseIdx = 0;
+    ClauseIndex clauseIdx = 0;
     while (std::getline(dimacsStream, line))
     {
         firstNonSpaceIdx = line.find_first_not_of(" \t\r\n");
@@ -162,21 +162,58 @@ Solver::Solver(std::istream &dimacsStream)
             std::copy(std::istream_iterator<int>{parser}, {}, std::back_inserter(m_formula[clauseIdx]));
             // remove trailing 0
             m_formula[clauseIdx++].pop_back();
+            watchTwoLiterals(clauseIdx-1);
         }
     }
     // FIXME this doesn't guarantee that it will not be reallocated
 //    m_learned.reserve(claCnt);
-    m_formula.reserve(claCnt*2);
+//    m_formula.reserve(claCnt*2);
+}
+
+void Solver::watchTwoLiterals(ClauseIndex clauseIdx)
+{
+    if (m_formula[clauseIdx].size() == 0)
+    {
+        throw std::runtime_error("clause has 0 elements");
+    }
+    if (m_formula[clauseIdx].size() == 1)
+    {
+        // add to unitClauses which will be propagated in the begining
+        // no need to watch this clause
+        unitClauses.push(clauseIdx);
+        unitLiterals.push(m_formula[clauseIdx][0]);
+    }
+    else
+    {
+        Literal watch1 = m_formula[clauseIdx][0];
+        watchLit(watch1, clauseIdx);
+        Literal watch2 = m_formula[clauseIdx][1];
+        watchLit(watch2, clauseIdx);
+    }
+}
+
+void Solver::watchLit(Literal lit, ClauseIndex clauseIdx)
+{
+    if (lit < 0)
+    {
+        m_valuation.values()[std::abs(lit)].negWatched.push_back(clauseIdx);
+    }
+    else
+    {
+        m_valuation.values()[std::abs(lit)].posWatched.push_back(clauseIdx);
+    }
 }
 
 OptionalPartialValuation Solver::solve2()
 {
-    std::queue<ClauseIndex> unitClauses;
-    std::queue<Literal> unitLiterals;
     ClauseIndex conflict = -1;
     Literal l;
     while(true)
     {
+        for (unsigned k = 0; k < m_valuation.stackSize(); ++k) {
+            std::cout << m_valuation.stack()[k].lit << " ";
+        }
+        std::cout << std::endl;
         // if there is a conflict, clear queued unitProps, learn a clause and backtrack
         if (conflict != -1)
         {
@@ -193,20 +230,30 @@ OptionalPartialValuation Solver::solve2()
             {
                 return {};
             }
+            // watch-ujemo literale samo ako klauza ima bar 2 literala
+            // ako ima samo 1 literal, onda ce biti ubacena na pocetnom levelu, tako da je korektnost zagarantovana
+            if ( m_formula.back().size() > 1 )
+            {
+                watchTwoLiterals(m_formula.size()-1);
+            }
+
+            // sada se naucena klauza nalazi na vrhu m_formula, i pritom je jedinicna, stoga je guramo u red
+            unitLiterals.push(m_valuation.isClauseUnit(m_formula.back()));
+            unitClauses.push(m_formula.size()-1);
 
             conflict = -1;
         }
         // if there is unit prop literal, process it
         else if (!unitLiterals.empty())
         {
-            unitProp(unitClauses, unitLiterals);
+            conflict = unitProp();
         }
         // if there is an undefined literal, propagate it
         else if ((l = m_valuation.decideHeuristic()))
         {
             unitLiterals.push(l);
             unitClauses.push(-1);
-            unitProp(unitClauses, unitLiterals);
+            conflict = unitProp();
         }
         // if no literal was decided, then it's a full valuation - SAT
         else
@@ -217,34 +264,73 @@ OptionalPartialValuation Solver::solve2()
 }
 
 
-ClauseIndex Solver::unitProp(std::queue<ClauseIndex> &unitClauses, std::queue<Literal> &unitLiterals)
+ClauseIndex Solver::unitProp()
 {
     Literal lit = unitLiterals.front();
     std::vector<ClauseIndex> &watchedClauses = lit > 0 ?
-            m_valuation.values()[abs(lit)].negWatched
-            : m_valuation.values()[abs(lit)].posWatched;
+            m_valuation.values()[std::abs(lit)].negWatched
+            : m_valuation.values()[std::abs(lit)].posWatched;
     // Clause === vector<int>
     Clause currClause;
-    for (unsigned i = 0; i < watchedClauses.size(); ++i) {
+
+    unsigned i = 0;
+    unsigned j;
+    Literal l;
+    while (i < watchedClauses.size())
+//    for (unsigned i = 0; i < watchedClauses.size(); ++i)
+    {
         currClause = m_formula[watchedClauses[i]];
-//        watch1 = m_valuation.values()[abs(currClause[0])];
-//        watch2 = m_valuation.values()[abs(currClause[currClause.size()-1])];
-//        if ((*currClause)[0] == true || (*currClause)[currClause->size()] == true)
-//        {
-//            continue;
-//        }
-        // if otherWatched literal is true, continue
-        // find a literal that is true or undef
-//        for (unsigned j = 1; j < currClause->size()-1; ++j) {
+        if (lit == currClause[1])
+        {
+            std::swap(currClause[0], currClause[1]);
+        }
+        Literal watch1 = currClause[0];
+        Literal watch2 = currClause[1];
 
-//        }
-        // if such literal exists:
-            // change current watched lit with that lit2
-        // else if other watched lit is undef
+        // if other watched literal is true, continue
+        if (m_valuation.values()[std::abs(watch2)].value == Tribool::True)
+        {
+            i++;
+            continue;
+        }
+
+        for ( j = 2; j < currClause.size(); j++)
+        {
+            l = currClause[j];
+            Tribool variableInClause = l > 0 ? Tribool::True : Tribool::False;
+            Tribool variableInValuation = m_valuation.values()[std::abs(l)].value;
+            if (variableInClause == variableInValuation || variableInValuation == Tribool::Undefined)
+            {
+                break;
+            }
+        }
+
+        if (j<currClause.size())
+        {
+            if (currClause[j] > 0)
+            {
+                m_valuation.values()[std::abs(currClause[j])].negWatched.push_back(i);
+            }
+            else
+            {
+                m_valuation.values()[std::abs(currClause[j])].posWatched.push_back(i);
+            }
+            watchedClauses[i] = watchedClauses[watchedClauses.size()-1];
+            watchedClauses.pop_back();
+            std::swap(currClause[watch1], currClause[j]);
+        }
+        else if (m_valuation.values()[std::abs(watch2)].value == Tribool::Undefined)
+        {
             // UnitProp that other watched lit
-        // else
+            unitClauses.push(i);
+            unitLiterals.push(watch2);
+            i++;
+        }
+        else
+        {
             // CONFLICT
-
+            return i;
+        }
     }
     // for all clauses watched by l
         // if exists undefined literal lit2, different from other watched
@@ -272,6 +358,13 @@ ClauseIndex Solver::unitProp(std::queue<ClauseIndex> &unitClauses, std::queue<Li
 
 OptionalPartialValuation Solver::solve()
 {
+    printAllWatchedClauses();
+    while(!unitLiterals.empty()){
+        std::cout << unitLiterals.front() << std::endl;
+        std::cout << m_formula[unitClauses.front()] << std::endl;
+        unitLiterals.pop();
+        unitClauses.pop();
+    }
     while (true)
     {
 //        for (unsigned k = 0; k < m_valuation.stackSize(); ++k) {
@@ -316,7 +409,7 @@ OptionalPartialValuation Solver::solve()
         else if ( (unitClause = hasUnitClause(l)) != -1 )
         {
             // unit prop with stored unitClause
-            // std::cout << "unit prop:" << (l>0? "" : "~") << "p" << abs(l) << std::endl;
+            // std::cout << "unit prop:" << (l>0? "" : "~") << "p" << std::abs(l) << std::endl;
             if (m_formula[unitClause].empty())
             {
                 throw std::runtime_error("unit props unit clause has 0 elements.");

@@ -45,6 +45,8 @@ int main(int argc, char **argv)
             {
                 std::cout << "test #" << i << "failed" << std::endl;
             }
+            if (i==2)
+                return 0;
         }
         const unsigned runWhich = tests.size()-1;
         dimacsStream = std::ifstream{"../source/" + tests[runWhich]};
