@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 
             Solver t{dimacsStream};
             t.UseLearning = true;
-            OptionalPartialValuation solution = t.solve();
+            OptionalPartialValuation solution = t.solve2();
             dimacsStream.close();
 
             if (solution.operator bool() == expected[i])
@@ -45,8 +45,6 @@ int main(int argc, char **argv)
             {
                 std::cout << "test #" << i << "failed" << std::endl;
             }
-            if (i==2)
-                return 0;
         }
         const unsigned runWhich = tests.size()-1;
         dimacsStream = std::ifstream{"../source/" + tests[runWhich]};
@@ -69,7 +67,7 @@ int main(int argc, char **argv)
 
     Solver s{dimacsStream};
     s.UseLearning = true;
-    OptionalPartialValuation solution = s.solve();
+    OptionalPartialValuation solution = s.solve2();
 
     std::clock_t c_end = std::clock();
     time_point finishTime = high_resolution_clock::now();
