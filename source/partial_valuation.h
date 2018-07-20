@@ -144,6 +144,11 @@ public:
     */
     Literal firstUndefined() const;
 
+    bool isLiteralTrue(Literal lit);
+
+    bool isLiteralUndefined(Literal lit);
+
+    int posOfFirstNonFalseInClause(Clause &currClause, int startInd);
     /**
     * @brief reset - postavlja parcijalnu valuaciju u pocetnu poziciju
     *

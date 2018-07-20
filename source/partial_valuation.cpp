@@ -74,21 +74,17 @@ Literal PartialValuation::decideHeuristic()
     return candidatePos;
 }
 
-// CHANGEME: Clause* --> ClauseIndex
 void PartialValuation::push(Literal l, ClauseIndex reason)
 {
     push(l, false, reason);
 }
 
-// CHANGEME: Clause* --> ClauseIndex
-// else if (reason != -1)
 void PartialValuation::push(Literal l, bool isDecided, ClauseIndex reason)
 {
     unsigned pos = std::abs(l);
     m_values[pos].value = l > 0 ? Tribool::True : Tribool::False;
     unsigned level = m_stack.empty() ? 1 : m_stack.back().level;
 
-    // if decide literal
     if (isDecided)
     {
         decides.push_back(l);
@@ -97,7 +93,6 @@ void PartialValuation::push(Literal l, bool isDecided, ClauseIndex reason)
     m_values[pos].level = level;
     if (isDecided)
     {
-//        std::cout << "new decide.level = " << level << std::endl;
         m_stack.emplace_back(l, level, true);
         return;
     }
@@ -166,15 +161,10 @@ bool PartialValuation::backjump(Clause& reason)
     }
     else
     {
-//        std::cout << "reason = " << reason << std::endl;
-//        std::cout << "levels = " << levels << std::endl;
         std::nth_element(levels.begin(), levels.end() - 2, levels.end());
         // TODO no need to sort the whole vector
         backjumpToLevel = levels[levels.size() - 2];
     }
-
-
-    // std::cout << "pop everything > " << backjumpToLevel << std::endl;
 
     while(m_stack.size() && m_stack.back().level > backjumpToLevel)
     {
@@ -232,6 +222,33 @@ Literal PartialValuation::firstUndefined() const
 {
     auto it = std::find(m_values.cbegin()+1, m_values.cend(), c_defaultLiteralInfo);
     return it != m_values.cend() ? it-m_values.cbegin() : NullLiteral;
+}
+
+bool PartialValuation::isLiteralTrue(Literal lit)
+{
+    Tribool litInClause = lit > 0 ? Tribool::True : Tribool::False;
+    Tribool litInValuation = m_values[std::abs(lit)].value;
+    return litInClause == litInValuation;
+}
+
+bool PartialValuation::isLiteralUndefined(Literal lit)
+{
+    return m_values[std::abs(lit)].value == Tribool::Undefined;
+}
+
+int PartialValuation::posOfFirstNonFalseInClause(Clause &currClause, int startInd)
+{
+    for (unsigned j = startInd; j < currClause.size(); j++)
+    {
+        Literal l = currClause[j];
+        Tribool variableInClause = l > 0 ? Tribool::True : Tribool::False;
+        Tribool variableInValuation = values()[std::abs(l)].value;
+        if (variableInClause == variableInValuation || variableInValuation == Tribool::Undefined)
+        {
+            return j;
+        }
+    }
+    return -1;
 }
 
 void PartialValuation::reset(unsigned nVars)

@@ -4,7 +4,7 @@
 #include "partial_valuation.h"
 
 #include <iostream>
-#include <queue> // TODO delete queue from .cpp, or do somehting more pretty
+#include <queue>
 #include <experimental/optional>
 
 using OptionalPartialValuation = std::experimental::optional<PartialValuation>;
@@ -30,9 +30,11 @@ public:
     */
     OptionalPartialValuation solve();
 
+    /**
+    * @brief solve2 - DPLL algoritam za proveru zadovoljivosti sa 2-nadgledana literala
+    * @return parcijalnu valuaciju ili nista
+    */
     OptionalPartialValuation solve2();
-
-    ClauseIndex unitProp();
 
     /**
      * @brief UseLearning whether learning clauses should be used
@@ -82,9 +84,22 @@ private:
 
     Clause findResponsibleLiterals(Clause& conflict);
 
+    ClauseIndex unitProp();
+
+    void clearUnitProps();
+
+    void pushUnitProp(Literal lit, ClauseIndex ci);
+
+    void watchLearnedClause();
+
     void watchTwoLiterals(ClauseIndex clauseIdx);
 
     void watchLit(Literal lit, ClauseIndex clauseIdx);
+
+    void changeWatchedLiteral(std::vector<ClauseIndex> &watchedClauses,
+                ClauseIndex currClauseInd, int currLitInd, int otherLitInd);
+
+    ClauseIndex updateWatchedClauses(std::vector<ClauseIndex> &watchedClauses, Literal lit);
 
     // TODO: deleteme, helper function
     void printAllWatchedClauses()
@@ -107,11 +122,9 @@ private:
             }
         }
         std::cout << "\n\n";
-
     }
 
 private:
-//    CNFFormula m_learned;
     CNFFormula m_formula;
     PartialValuation m_valuation;
 

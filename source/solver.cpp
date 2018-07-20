@@ -5,12 +5,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <iterator>
-#include <queue>
 
-//Solver::Solver(const CNFFormula &formula)
-//  : m_formula(formula), m_valuation(m_formula.size())
-//{
-//}
 
 Clause Solver::findResponsibleLiterals(Clause& conflict)
 {
@@ -18,52 +13,20 @@ Clause Solver::findResponsibleLiterals(Clause& conflict)
 
     auto& stack = m_valuation.stack();
 
-
-//    std::cout << "Current reason: ";
-//    for (Literal var : reason) {
-//        std::cout << var << " ";
-//    }
-//    std::cout << std::endl;
-
-
     while(m_valuation.stackSize() && m_valuation.back().hasReason())
     {
-        // CHANGEME: NOTHING SHOULD BE DONE HERE
         reason = resolution(reason, m_formula[stack.back().reason], stack.back().lit);
         m_valuation.pop();
-
-//        std::cout << "Current reason: ";
-//        for (Literal var : reason) {
-//            std::cout << var << " ";
-//        }
-//        std::cout << std::endl;
-
     }
-//    unsigned i;
-
-//    for (i = stack.size() - 1; stack[i].hasReason() && i > 0; i--)
-//    {
-//        // std::cout << stack[i].lit << " was set because of: " << *stack[i].reason << std::endl;
-//        reason = resolution(reason, *stack[i].reason);
-//        // std::cout << "reason is now = " << reason << std::endl;
-//    }
 
     if (reason == conflict)
     {
-//        std::cout << m_valuation.stack();
-//        for (unsigned k = 0; k < m_valuation.stackSize(); ++k) {
-//            std::cout << m_valuation.stack()[k].lit << " ";
-//        }
-//        std::cout <<"\n";
-//        std::cout << "conflictClause:  ";
-//        std::cout << conflict;
         std::cout << "I'm not 100% sure about where to handle this, but it's UNSAT." << std::endl;
         return Clause();
     }
 
     return reason;
 }
-
 
 Clause Solver::resolution(Clause& reason, Clause& b, Literal& which) const
 {
@@ -77,7 +40,6 @@ Clause Solver::resolution(Clause& reason, Clause& b, Literal& which) const
     auto remove2 = std::find(literals.begin(), literals.end(), which);
     if (literals.end() == remove2)
     {
-        // if it comes here, it possibly learned too much, and broke the pointers to m_formula
         throw std::runtime_error("Clause b doesnt contain literal which");
     }
     literals.erase(which);
@@ -85,22 +47,6 @@ Clause Solver::resolution(Clause& reason, Clause& b, Literal& which) const
     return Clause(literals.begin(), literals.end());
 }
 
-
-// TODO: nigde se ne koristi
-Clause Solver::negateClauseLiterals(Clause& cut) const
-{
-    Clause c;
-    for(Literal l : cut)
-    {
-        c.push_back(-l);
-    }
-
-    return c;
-}
-
-// TODO why is 1st element on stack lvl 2?
-// TODO: add watchers to clause when adding new clause
-// CHANGEME: mora da se menja potpis fje
 bool Solver::learnClause(ClauseIndex conflict)
 {
     if (conflict == -1)
@@ -108,7 +54,6 @@ bool Solver::learnClause(ClauseIndex conflict)
         throw std::runtime_error("Delete this: bug - conflict clause is null");
     }
     // Find the cut in the implication graph that led to the conflict
-    // CHANGEME: mora da promeni argument fje
     auto reasonClause = findResponsibleLiterals(m_formula[conflict]);
 
     if (reasonClause.empty())
@@ -117,22 +62,13 @@ bool Solver::learnClause(ClauseIndex conflict)
         return true;
     }
     m_formula.push_back(reasonClause);
-//    if ( reasonClause.size() == 4 &&
-//         (reasonClause[0]==-49
-//         ||reasonClause[1]==-49
-//         ||reasonClause[2]==-49
-//         ||reasonClause[3]==-49)
-//         ){
-//        std::cout << "\n\nI'M LEARNING\n\n";
-//        std::cout << reasonClause;
-//    }
 
     // Non-chronologically backtrack ("back jump")
-
     bool successful = m_valuation.backjump(reasonClause);
     return !successful;
 }
 
+// BUG: ako imamo na ulazu klauze sa duplikat literalima, ne sljaka algoritam, treba da se to obradi na ulazu
 Solver::Solver(std::istream &dimacsStream)
 {
     // skip comments and empty lines
@@ -181,8 +117,7 @@ Solver::Solver(std::istream &dimacsStream)
             watchTwoLiterals(clauseIdx-1);
         }
     }
-    // FIXME this doesn't guarantee that it will not be reallocated
-//    m_learned.reserve(claCnt);
+    // TODO: na koliko je najbolje da ga rezervisemo? I dal je bolje rezervaciju pre resize-a da radimo
 //    m_formula.reserve(claCnt*2);
 }
 
@@ -225,28 +160,11 @@ OptionalPartialValuation Solver::solve2()
     ClauseIndex conflict = -1;
     Literal l;
 
-//    printAllWatchedClauses();
     while(true)
     {
-//        std::cout << "hey\n";
-//        for (unsigned k = 0; k < m_valuation.stackSize(); ++k) {
-//            if (m_valuation.stack()[k].isDecided)
-//            {
-//                std::cout << "#";
-//            }
-//            std::cout << m_valuation.stack()[k].lit << " ";
-//        }
-//        std::cout << std::endl;
-        // if there is a conflict, clear queued unitProps, learn a clause and backtrack
         if (conflict != -1)
         {
-//            std::cout << m_formula[conflict] << std::endl;
-            // function: clear all unitProps
-            while(!unitClauses.empty())
-            {
-                unitClauses.pop();
-                unitLiterals.pop();
-            }
+            clearUnitProps();
 
             m_valuation.updateWeights(m_formula[conflict]);
             bool isUnsat = learnClause(conflict);
@@ -254,46 +172,22 @@ OptionalPartialValuation Solver::solve2()
             {
                 return {};
             }
-            // watch-ujemo literale samo ako klauza ima bar 2 literala
-            // ako ima samo 1 literal, onda ce biti ubacena na pocetnom levelu, tako da je korektnost zagarantovana
-            if ( m_formula.back().size() > 1 )
-            {
-                Clause& learnedClause = m_formula.back();
-                Literal toBePushed = m_valuation.isClauseUnit(m_formula.back());
-                auto litPos = std::find(learnedClause.begin(), learnedClause.end(), toBePushed);
-                std::swap(*litPos, learnedClause[0]);
-                auto lit2Pos = std::max_element(learnedClause.begin(), learnedClause.end(),
-                         [&](Literal& l1, Literal& l2){
-                    return m_valuation.values()[std::abs(l1)].level < m_valuation.values()[std::abs(l2)].level;
-                });
-                std::swap(*lit2Pos, learnedClause[1]);
+            watchLearnedClause();
 
-                watchTwoLiterals(m_formula.size()-1);
-            }
-
-            // sada se naucena klauza nalazi na vrhu m_formula, i pritom je jedinicna, stoga je guramo u red
-            unitLiterals.push(m_valuation.isClauseUnit(m_formula.back()));
-            unitClauses.push(m_formula.size()-1);
+            // push learned clause to propagation
+            pushUnitProp(m_valuation.isClauseUnit(m_formula.back()), m_formula.size()-1);
 
             conflict = -1;
         }
-        // if there is unit prop literal, process it
+        // if there is unit prop literal, propagate it
         else if (!unitLiterals.empty())
         {
-//            std::cout << "I'm unit proping:" << std::endl;
             conflict = unitProp();
-            if (conflict != -1)
-            {
-//                std::cout << "BOOM conflict\n";
-            }
-//            std::cout << "conflict: " << conflict << std::endl;
         }
         // if there is an undefined literal, propagate it
         else if ((l = m_valuation.decideHeuristic()))
         {
-//            std::cout << "I'm deciding:" << std::endl;
-            unitLiterals.push(l);
-            unitClauses.push(-1);
+            pushUnitProp(l, -1);
             conflict = unitProp();
         }
         // if no literal was decided, then it's a full valuation - SAT
@@ -304,19 +198,57 @@ OptionalPartialValuation Solver::solve2()
     }
 }
 
+void Solver::clearUnitProps()
+{
+    while(!unitClauses.empty())
+    {
+        unitClauses.pop();
+        unitLiterals.pop();
+    }
+}
 
-// BUG: za unit propove ne proveravam dal dolazi do konflikta
-// BUG: ako imamo na ulazu klauze sa duplikat literalima, ne sljaka algoritam
-// BUG: ako imamo dve iste klauze, nisam siguran da li to predstavlja problem
+void Solver::pushUnitProp(Literal lit, ClauseIndex ci)
+{
+    unitLiterals.push(lit);
+    unitClauses.push(ci);
+}
+
+// watch-ujemo literale samo ako klauza ima bar 2 literala
+// ako ima samo 1 literal, onda ce biti ubacena na pocetnom levelu, tako da je korektnost zagarantovana
+void Solver::watchLearnedClause()
+{
+    Clause& learnedClause = m_formula.back();
+
+    if (learnedClause.size() < 2)
+    {
+        return;
+    }
+
+    Literal toBePushed = m_valuation.isClauseUnit(m_formula.back());
+    auto litPos = std::find(learnedClause.begin(), learnedClause.end(), toBePushed);
+    std::swap(*litPos, learnedClause[0]);
+
+    auto lit2Pos = std::max_element(learnedClause.begin(), learnedClause.end(),
+             [&](Literal& l1, Literal& l2){
+        return m_valuation.values()[std::abs(l1)].level < m_valuation.values()[std::abs(l2)].level;
+    });
+    std::swap(*lit2Pos, learnedClause[1]);
+
+    watchTwoLiterals(m_formula.size()-1);
+}
+
 ClauseIndex Solver::unitProp()
 {
     Literal lit = unitLiterals.front();
-    if (m_valuation.values()[std::abs(lit)].value != Tribool::Undefined)
+    if (!m_valuation.isLiteralUndefined(lit))
     {
         if (m_valuation.values()[std::abs(lit)].value != (lit>0?Tribool::True : Tribool::False))
         {
-            // ovde treba da obradimo ako propagacija klauze koja ima samo jedan literal ne prodje
-            std::cout << "something's bad";
+            // BUGPOSSIBLE: za unit propove proverava dal dolazi do konflikta
+            // FIXME: trebalo bi da sljaka, ali nisam 100% siguran da je lepo obradjeno
+            //           treba da se odradi: kada se nauci jedinicna klauza
+            //           koja je protivrecna sa prethodno ubacenom jedinicnom klauzom
+            return unitClauses.front();
         }
 
         unitLiterals.pop();
@@ -326,100 +258,12 @@ ClauseIndex Solver::unitProp()
     std::vector<ClauseIndex> &watchedClauses = lit > 0 ?
             m_valuation.values()[std::abs(lit)].negWatched
             : m_valuation.values()[std::abs(lit)].posWatched;
-    // Clause === vector<int>
-//    Clause currClause;
 
-    unsigned i = 0;
-    unsigned j;
-    Literal l;
-//    if ( lit == 5)
-//    {
-//        std::cout << " Proping 5\n";
-//        std::cout << watchedClauses.size() << std::endl;;
-//    }
-    while (i < watchedClauses.size())
-//    for (unsigned i = 0; i < watchedClauses.size(); ++i)
+    ClauseIndex conflict;
+    if ((conflict = updateWatchedClauses(watchedClauses, lit)) != -1)
     {
-        Clause &currClause = m_formula[watchedClauses[i]];
-        if (std::abs(lit) == std::abs(currClause[1]))
-        {
-            std::swap(currClause[0], currClause[1]);
-        }
-//        Literal watch1 = currClause[0];
-        Literal watch2 = currClause[1];
-
-        // if other watched literal is true, continue
-        Tribool otherWatchedInClause = watch2 > 0 ? Tribool::True : Tribool::False;
-        Tribool otherWatchedInValuation = m_valuation.values()[std::abs(watch2)].value;
-        if (otherWatchedInClause == otherWatchedInValuation)
-        {
-            i++;
-            continue;
-        }
-
-        for (j = 2; j < currClause.size(); j++)
-        {
-            l = currClause[j];
-            Tribool variableInClause = l > 0 ? Tribool::True : Tribool::False;
-            Tribool variableInValuation = m_valuation.values()[std::abs(l)].value;
-            if (variableInClause == variableInValuation || variableInValuation == Tribool::Undefined)
-            {
-                break;
-            }
-        }
-
-        if (j<currClause.size())
-        {
-//            std::cout << " Bugged out :'(\n";
-//            std::cout << "Literal: " << lit << " --- ";
-//            std::cout << "Clause: " << currClause << std::endl;
-//            std::cout << "ClauseIndex: " << watchedClauses[i] << std::endl;
-//            std::cout << "##0:" << watchedClauses.size() << "\n";
-//            std::cout << "--------" << std::endl;
-//            std::cout << "Literal: " << lit;
-//            std::cout << "Clause: " << currClause;
-//            printAllWatchedClauses();
-            if (currClause[j] > 0)
-            {
-                m_valuation.values()[std::abs(currClause[j])].posWatched.push_back(watchedClauses[i]);
-            }
-            else
-            {
-                m_valuation.values()[std::abs(currClause[j])].negWatched.push_back(watchedClauses[i]);
-            }
-            watchedClauses[i] = watchedClauses[watchedClauses.size()-1];
-            watchedClauses.pop_back();
-            std::swap(currClause[0], currClause[j]);
-//            printAllWatchedClauses();
-        }
-        else if (m_valuation.values()[std::abs(watch2)].value == Tribool::Undefined)
-        {
-//            std::cout << "I'm here baby" << std::endl;
-//            std::cout << " watchedLiteral: " << watch2 << std::endl;
-//            std::cout << " watchedClause: " << m_formula[watchedClauses[i]] << std::endl;
-            // UnitProp that other watched lit
-            unitClauses.push(watchedClauses[i]);
-            unitLiterals.push(watch2);
-            i++;
-        }
-        else
-        {
-            // CONFLICT
-            m_valuation.push(unitLiterals.front(), unitClauses.front());
-            return watchedClauses[i];
-        }
+        return conflict;
     }
-    // for all clauses watched by l
-        // if exists undefined literal lit2, different from other watched
-            // change watchers l, lit2
-        // else if watchedLit2 == true, clause is sat
-        // else clause is unit, watchedLit2 can be unitProped
-            // unitClauses.push(currClause);
-            // unitLiteral.push(watchedLit2);
-    // process all clauses watched by l
-
-    // if there is a conflict return the conflict clause
-
 
     if (unitClauses.front() != -1)
         // if explain clause exists it's a unitProp
@@ -433,28 +277,69 @@ ClauseIndex Solver::unitProp()
     return -1;
 }
 
+void Solver::changeWatchedLiteral(std::vector<ClauseIndex> &watchedClauses,
+            ClauseIndex currClauseInd, int currLitInd, int otherLitInd)
+{
+    auto& currClause = m_formula[watchedClauses[currClauseInd]];
+    if (currClause[otherLitInd] > 0)
+    {
+        m_valuation.values()[std::abs(currClause[otherLitInd])].posWatched.push_back(watchedClauses[currClauseInd]);
+    }
+    else
+    {
+        m_valuation.values()[std::abs(currClause[otherLitInd])].negWatched.push_back(watchedClauses[currClauseInd]);
+    }
+    watchedClauses[currClauseInd] = watchedClauses[watchedClauses.size()-1];
+    watchedClauses.pop_back();
+    std::swap(currClause[currLitInd], currClause[otherLitInd]);
+}
+
+ClauseIndex Solver::updateWatchedClauses(std::vector<ClauseIndex> &watchedClauses, Literal lit)
+{
+    unsigned i = 0;
+    int nonFalseLitInd;
+    while (i < watchedClauses.size())
+    {
+        Clause &currClause = m_formula[watchedClauses[i]];
+        if (std::abs(lit) == std::abs(currClause[1]))
+        {
+            std::swap(currClause[0], currClause[1]);
+        }
+        Literal watch2 = currClause[1];
+
+        if (m_valuation.isLiteralTrue(watch2))
+        {
+            i++;
+        }
+        else if ((nonFalseLitInd = m_valuation.posOfFirstNonFalseInClause(currClause, 2)) != -1)
+        {
+            changeWatchedLiteral(watchedClauses, i, 0, nonFalseLitInd);
+        }
+        else if (m_valuation.isLiteralUndefined(watch2))
+        {
+            // UnitProp that other watched lit
+            pushUnitProp(watch2, watchedClauses[i]);
+            i++;
+        }
+        else
+        {
+            // CONFLICT
+            m_valuation.push(unitLiterals.front(), unitClauses.front());
+            return watchedClauses[i];
+        }
+    }
+    return -1;
+}
+
 OptionalPartialValuation Solver::solve()
 {
-//    printAllWatchedClauses();
-//    while(!unitLiterals.empty()){
-//        std::cout << unitLiterals.front() << std::endl;
-//        std::cout << m_formula[unitClauses.front()] << std::endl;
-//        unitLiterals.pop();
-//        unitClauses.pop();
-//    }
     while (true)
     {
-//        for (unsigned k = 0; k < m_valuation.stackSize(); ++k) {
-//            std::cout << m_valuation.stack()[k].lit << " ";
-//        }
-//        std::cout << std::endl;
-
         Literal l;
         ClauseIndex conflict;
         ClauseIndex unitClause;
         if ( (conflict = hasConflict()) != -1 )
         {
-//            std::cout << std::endl << "conflict in " << *conflict << std::endl;
             if (UseLearning)
             {
                 m_valuation.updateWeights(m_formula[conflict]);
@@ -463,12 +348,6 @@ OptionalPartialValuation Solver::solve()
                 {
                     return {};
                 }
-//                std::cout << "num of learned clauses = " << m_learned.size() << std::endl;
-//                std::cout << "last learned = " << m_learned.back() << std::endl;
-//                std::cout << "decides = " << m_valuation.decides << std::endl;
-//                std::cout << "values = ";
-//                m_valuation.getValues(&m_learned.back());
-//                std::cout << std::endl;
             }
             else
             {
@@ -486,7 +365,6 @@ OptionalPartialValuation Solver::solve()
         else if ( (unitClause = hasUnitClause(l)) != -1 )
         {
             // unit prop with stored unitClause
-            // std::cout << "unit prop:" << (l>0? "" : "~") << "p" << std::abs(l) << std::endl;
             if (m_formula[unitClause].empty())
             {
                 throw std::runtime_error("unit props unit clause has 0 elements.");
@@ -497,10 +375,8 @@ OptionalPartialValuation Solver::solve()
         {
             // deciding a literal
 
-            // todo heuristic here
             // l = m_valuation.firstUndefined();
             l = m_valuation.decideHeuristic();
-//            std::cout << "decide = " << l << std::endl;
             if (l)
             {
                 m_valuation.push(l, true);
@@ -525,22 +401,13 @@ std::string Solver::getInfo() const
 
 ClauseIndex Solver::hasConflict() const
 {
-    // first checking learned clauses
     for (unsigned i = 0; i < m_formula.size(); ++i)
     {
         if ( m_valuation.isClauseFalse(m_formula[i]))
         {
-//            return const_cast<Clause*>(&m_formula[i]);
             return i;
         }
     }
-//    for (const Clause& c : m_formula)
-//    {
-//        if (m_valuation.isClauseFalse(c))
-//        {
-//            return const_cast<Clause*>(&c);
-//        }
-//    }
     return -1;
 }
 
@@ -550,17 +417,9 @@ ClauseIndex Solver::hasUnitClause(Literal & l) const
     {
         if (( l = m_valuation.isClauseUnit(m_formula[i]) ))
         {
-//            return const_cast<Clause*>(&m_formula[i]);
             return i;
         }
     }
-//    for (const Clause &c : m_formula)
-//    {
-//        if ((l = m_valuation.isClauseUnit(c)))
-//        {
-//            return const_cast<Clause*>(&c);
-//        }
-//    }
     l = NullLiteral;
     return -1;
 }
