@@ -57,7 +57,6 @@ void PartialValuation::updateWeights()
     );
 }
 
-// TODO optimise
 Literal PartialValuation::decideHeuristic()
 {
     // Variable State Independent Decaying Sum
@@ -150,11 +149,6 @@ bool PartialValuation::backjump(Clause& reason)
         {
             throw std::runtime_error("reason clause has 0 elements");
         }
-
-        // TODO remember learned literal for restarts (remembered it already in m_learned)
-
-        // unit prop should take care of it
-        // i think we should backtrack to the level of it in stack
         Literal l = reason.back();
         // if there's only one variable in learned clause, than it's only that decided literals fault
         backjumpToLevel = m_values[std::abs(l)].level - 1;
@@ -162,7 +156,6 @@ bool PartialValuation::backjump(Clause& reason)
     else
     {
         std::nth_element(levels.begin(), levels.end() - 2, levels.end());
-        // TODO no need to sort the whole vector
         backjumpToLevel = levels[levels.size() - 2];
     }
 

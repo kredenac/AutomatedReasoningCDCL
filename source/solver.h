@@ -101,28 +101,7 @@ private:
 
     ClauseIndex updateWatchedClauses(std::vector<ClauseIndex> &watchedClauses, Literal lit);
 
-    // TODO: deleteme, helper function
-    void printAllWatchedClauses()
-    {
-        for (unsigned i = 1; i < m_valuation.values().size(); ++i)
-//        for(LiteralInfo litInf : m_valuation.values())
-        {
-            std::cout << "\n";
-            LiteralInfo &litInf = m_valuation.values()[i];
-            std::cout << "Lit: " << i << std::endl;
-            std::cout << "  Pos Watched:" << std::endl;
-            for (ClauseIndex cl : litInf.posWatched)
-            {
-                std::cout << "    " << m_formula[cl] << std::endl;
-            }
-            std::cout << "  Neg Watched:" << std::endl;
-            for (ClauseIndex cl : litInf.negWatched)
-            {
-                std::cout << "    " << m_formula[cl] << std::endl;
-            }
-        }
-        std::cout << "\n\n";
-    }
+    void printAllWatchedClauses();
 
 private:
     CNFFormula m_formula;

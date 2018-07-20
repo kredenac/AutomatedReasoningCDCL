@@ -11,22 +11,19 @@
 using std::chrono::high_resolution_clock;
 using time_point = std::chrono::high_resolution_clock::time_point;
 
-// TODO faster way of finding unit clauses (watch pointers)
-// TODO clause needs to be more sophisticated than just a vector.
+void testWithTimer(std::string fileName, bool useLearning);
 
 int main(int argc, char **argv)
 {
     std::ifstream dimacsStream;
     if (2 != argc)
     {
-        //std::cout << getexepath() << std::endl;
-        //throw std::runtime_error{"Usage: ./3 dimacs.cnf"};
-        //std::cout << "type in cnf file name" << std::endl;
-        //std::string fname;
-        //std::cin >> fname;
         std::vector<std::string> tests {"plsWrk.cnf", "test-SAT.cnf", "test-UNSAT.cnf", "sat.cnf", "unsat.cnf", "sudoku.cnf"};
         std::vector<bool> expected {true, true, false, true, false, true};
         // run tests
+        std::cout << "----------------------------------------------------------\n";
+        std::cout << "     Running tests with two-watched-literals:\n";
+        std::cout << "----------------------------------------------------------\n";
         for (unsigned i = 0; i < tests.size() - 1; i++)
         {
             std::string str = tests[i];
@@ -46,6 +43,7 @@ int main(int argc, char **argv)
                 std::cout << "test #" << i << "failed" << std::endl;
             }
         }
+        std::cout << "\n\n";
         const unsigned runWhich = tests.size()-1;
         dimacsStream = std::ifstream{"../source/" + tests[runWhich]};
     }
@@ -58,16 +56,28 @@ int main(int argc, char **argv)
     {
         throw std::runtime_error{"Bad path to dimacs file"};
     }
-    // std::cout << "sizeof long double = " << sizeof(long double) << std::endl; // some compilers print 16
 
-//    return 0;
+    testWithTimer("sudoku.cnf", true);
+    testWithTimer("sudoku.cnf", false);
+
+    return 0;
+}
+
+void testWithTimer(std::string fileName, bool useLearning)
+{
+    std::string fName = fileName + (useLearning ? " with " : " without ");
+    std::ifstream dimacsStream = std::ifstream{"../source/" + fileName};
+
+    std::cout << "----------------------------------------------------------\n";
+    std::cout << "     Running " << fName << "two-watched-literals:\n";
+    std::cout << "----------------------------------------------------------\n";
 
     time_point startTime = high_resolution_clock::now();
     std::clock_t c_start = std::clock();
 
     Solver s{dimacsStream};
     s.UseLearning = true;
-    OptionalPartialValuation solution = s.solve2();
+    OptionalPartialValuation solution = useLearning ? s.solve2() : s.solve();
 
     std::clock_t c_end = std::clock();
     time_point finishTime = high_resolution_clock::now();
@@ -83,17 +93,10 @@ int main(int argc, char **argv)
         std::cout << "UNSAT" << std::endl;
     }
 
-    std::cout << s.getInfo() << std::endl;
+//    std::cout << s.getInfo() << std::endl;
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(finishTime - startTime).count();
     long double time_elapsed_ms = 1000.0 * (c_end-c_start) / CLOCKS_PER_SEC;
     std::cout << "CPU time used: " << time_elapsed_ms  << " ms" << std::endl;
     std::cout << "Total time elapsed = " << duration / 1000.0 << " ms" << std::endl;
-    return 0;
+    std::cout << "\n\n";
 }
-
-//std::string getexepath()
-//{
-//    char result[1000];
-//    ssize_t count = readlink( "/proc/self/exe", result, 1000);
-//    return std::string( result, (count > 0) ? count : 0 );
-//}

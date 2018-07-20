@@ -102,6 +102,7 @@ Solver::Solver(std::istream &dimacsStream)
 
     // read clauses whilst ignoring comments and empty lines
     m_valuation.reset(varCnt);
+    m_formula.reserve(claCnt+1000);
     m_formula.resize(claCnt);
     ClauseIndex clauseIdx = 0;
     while (std::getline(dimacsStream, line))
@@ -117,8 +118,6 @@ Solver::Solver(std::istream &dimacsStream)
             watchTwoLiterals(clauseIdx-1);
         }
     }
-    // TODO: na koliko je najbolje da ga rezervisemo? I dal je bolje rezervaciju pre resize-a da radimo
-//    m_formula.reserve(claCnt*2);
 }
 
 void Solver::watchTwoLiterals(ClauseIndex clauseIdx)
@@ -422,4 +421,25 @@ ClauseIndex Solver::hasUnitClause(Literal & l) const
     }
     l = NullLiteral;
     return -1;
+}
+
+void Solver::printAllWatchedClauses()
+{
+    for (unsigned i = 1; i < m_valuation.values().size(); ++i)
+    {
+        std::cout << "\n";
+        LiteralInfo &litInf = m_valuation.values()[i];
+        std::cout << "Lit: " << i << std::endl;
+        std::cout << "  Pos Watched:" << std::endl;
+        for (ClauseIndex cl : litInf.posWatched)
+        {
+            std::cout << "    " << m_formula[cl] << std::endl;
+        }
+        std::cout << "  Neg Watched:" << std::endl;
+        for (ClauseIndex cl : litInf.negWatched)
+        {
+            std::cout << "    " << m_formula[cl] << std::endl;
+        }
+    }
+    std::cout << "\n\n";
 }

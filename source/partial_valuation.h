@@ -181,7 +181,6 @@ private:
      */
     const float divideWeightsBy = 2.0f;
 
-    // TODO: mi ne koristimo rampu, tako da nam ovo ne treba
     /**
      * @brief c_stackSizeMultiplier - for each decided literal there will be
      * a ramp, so possibly 2x number of literals in stack
